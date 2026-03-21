@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>透析コンソール管理システム</title>
+<style>
+/* ════════════════════════════════ */
+/* ★ STEP7で変更が必要な箇所はここだけ */
+/* ════════════════════════════════ */
+
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text2: #8b949e;
+  --blue: #2f81f7;
+  --blue-dim: #1f4e9a;
+  --green: #3fb950;
+  --green-dim: #1a4a24;
+  --yellow: #d29922;
+  --yellow-dim: #4a3800;
+  --red: #f85149;
+  --red-dim: #4a0f0d;
+  --purple: #a371f7;
+  --orange: #f0883e;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+.nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 16px; height: 52px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+.nav-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; }
+.nav-brand .logo { width: 28px; height: 28px; background: var(--blue); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.nav-back { background: none; border: 1px solid var(--border); color: var(--text2); padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; display: none; }
+.nav-back:hover { color: var(--text); border-color: var(--text2); }
+
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* 接続設定バー */
+.config-bar { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; margin: 16px 16px 0; padding: 12px 14px; }
+.config-bar-title { font-size: 11px; color: var(--text2); font-weight: 700; margin-bottom: 8px; }
+.config-row { display: flex; gap: 8px; align-items: center; }
+.config-input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 11px; padding: 6px 8px; font-family: inherit; }
+.config-input:focus { outline: none; border-color: var(--blue); }
+.btn-config-save { background: var(--blue); color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.config-status { font-size: 11px; margin-top: 6px; }
+.config-status.ok { color: var(--green); }
+.config-status.ng { color: var(--red); }
+.config-status.demo { color: var(--yellow); }
+
+/* 一覧 */
+.list-header { padding: 16px 16px 10px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.list-title { font-size: 18px; font-weight: 700; }
+.list-stats { display: flex; gap: 8px; }
+.stat-chip { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; border: 1px solid; }
+.stat-chip.ok { color: var(--green); border-color: var(--green); background: var(--green-dim); }
+.stat-chip.warn { color: var(--yellow); border-color: var(--yellow); background: var(--yellow-dim); }
+.stat-chip.alert { color: var(--red); border-color: var(--red); background: var(--red-dim); }
+
+.filter-bar { padding: 0 16px 12px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+.filter-bar::-webkit-scrollbar { display: none; }
+.filter-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: none; color: var(--text2); font-size: 12px; cursor: pointer; white-space: nowrap; font-family: inherit; transition: all 0.15s; }
+.filter-btn.active, .filter-btn:hover { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+.console-grid { padding: 0 16px 24px; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.console-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 12px; cursor: pointer; transition: all 0.15s; position: relative; overflow: hidden; }
+.console-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.console-card.status-ok::before { background: var(--green); }
+.console-card.status-warn::before { background: var(--yellow); }
+.console-card.status-alert::before { background: var(--red); }
+.console-card:hover { border-color: var(--blue); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(47,129,247,0.15); }
+.card-id { font-size: 16px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 2px; }
+.card-model { font-size: 10px; color: var(--text2); margin-bottom: 8px; }
+.card-status { font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+.card-status.ok { color: var(--green); }
+.card-status.warn { color: var(--yellow); }
+.card-status.alert { color: var(--red); }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.ok .status-dot { background: var(--green); }
+.warn .status-dot { background: var(--yellow); }
+.alert .status-dot { background: var(--red); }
+
+/* ローディング */
+.loading { text-align: center; padding: 40px; color: var(--text2); font-size: 13px; }
+.spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* 詳細 */
+.detail-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px; }
+.detail-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+.detail-id { font-size: 26px; font-weight: 700; letter-spacing: -1px; }
+.detail-model { font-size: 13px; color: var(--text2); margin-top: 2px; }
+.status-badge { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid; }
+.status-badge.ok { color: var(--green); border-color: var(--green); background: var(--green-dim); }
+.status-badge.warn { color: var(--yellow); border-color: var(--yellow); background: var(--yellow-dim); }
+.status-badge.alert { color: var(--red); border-color: var(--red); background: var(--red-dim); }
+.detail-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.meta-label { font-size: 10px; color: var(--text2); margin-bottom: 2px; }
+.meta-value { font-size: 13px; font-weight: 600; }
+
+.tab-bar { display: flex; border-bottom: 1px solid var(--border); background: var(--surface); overflow-x: auto; scrollbar-width: none; }
+.tab-bar::-webkit-scrollbar { display: none; }
+.tab-btn { padding: 12px 14px; border: none; background: none; color: var(--text2); font-size: 12px; cursor: pointer; white-space: nowrap; font-family: inherit; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; }
+.tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+.tab-btn:hover:not(.active) { color: var(--text); }
+
+.tab-content { display: none; padding: 16px; }
+.tab-content.active { display: block; }
+
+.section-title { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+.btn-add { background: var(--blue); color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.btn-add:hover { opacity: 0.85; }
+
+.history-list { display: flex; flex-direction: column; gap: 8px; }
+.history-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+.history-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+.history-type { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+.type-inspect { background: rgba(47,129,247,0.15); color: var(--blue); }
+.type-trouble { background: rgba(248,81,73,0.15); color: var(--red); }
+.type-consumable { background: rgba(240,136,62,0.15); color: var(--orange); }
+.type-repair { background: rgba(163,113,247,0.15); color: var(--purple); }
+.history-date { font-size: 11px; color: var(--text2); }
+.history-content { font-size: 13px; line-height: 1.5; }
+.history-staff { font-size: 11px; color: var(--text2); margin-top: 4px; }
+
+.empty-state { text-align: center; padding: 32px 16px; color: var(--text2); font-size: 13px; }
+
+/* モーダル */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: flex-end; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px 16px 0 0; padding: 20px 16px 32px; width: 100%; max-width: 500px; max-height: 85vh; overflow-y: auto; animation: slideup 0.25s ease; }
+@keyframes slideup { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.modal-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+.modal-close { background: none; border: none; color: var(--text2); font-size: 20px; cursor: pointer; }
+.form-group { margin-bottom: 14px; }
+.form-label { font-size: 12px; color: var(--text2); margin-bottom: 6px; display: block; font-weight: 600; }
+.form-input, .form-select, .form-textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; padding: 10px 12px; font-family: inherit; outline: none; }
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--blue); }
+.form-textarea { min-height: 80px; resize: vertical; }
+.form-select option { background: var(--surface2); }
+.btn-submit { width: 100%; background: var(--blue); color: #fff; border: none; padding: 14px; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; margin-top: 6px; }
+.btn-submit:hover { opacity: 0.9; }
+.btn-submit:disabled { opacity: 0.5; cursor: default; }
+
+/* QRデモバー */
+.qr-demo-bar { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin: 16px 16px 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.qr-demo-label { font-size: 11px; color: var(--text2); flex: 1; min-width: 120px; }
+.qr-demo-select { background: var(--blue-dim); border: 1px solid var(--blue); border-radius: 6px; color: var(--blue); font-size: 12px; padding: 5px 8px; font-family: inherit; cursor: pointer; font-weight: 600; }
+.btn-scan { background: var(--blue); color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
+
+.save-result { text-align: center; padding: 8px; font-size: 13px; border-radius: 8px; margin-top: 8px; }
+.save-result.ok { background: var(--green-dim); color: var(--green); }
+.save-result.ng { background: var(--red-dim); color: var(--red); }
+</style>
+</head>
+<body>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// ★ STEP7で変更する箇所はここだけ！
+//   GASをデプロイした後に発行されたURLを下記に貼り付けてください。
+// ════════════════════════════════════════════════════════════
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwQM4hpOzgmQq5v3dZ9Sl-2OBJY_gMcL0us3O__NMpdX7W1gkSu1NrVxZ7rU4TRVBsA/exec"; // ← ここにGASのURLを貼り付ける
+// 例: const GAS_URL = "https://script.google.com/macros/s/AaBbCcDd.../exec";
+// ════════════════════════════════════════════════════════════
+
+// GAS_URLが空の場合はデモモードで動作
+const IS_DEMO = !GAS_URL;
+
+// ── デモ用データ（GAS_URLが未設定の場合に使用）──
+const DEMO_DEVICES = [
+  { id:"KW-C-001", site:"川奈", category:"コンソール", machineNo:1,  model:"DCS-200Si", status:"ok",   leaseCompany:"静銀リース",     startDate:"2023/05/31" },
+  { id:"KW-C-002", site:"川奈", category:"コンソール", machineNo:2,  model:"DCS-200Si", status:"ok",   leaseCompany:"静銀リース",     startDate:"2023/05/31" },
+  { id:"KW-C-012", site:"川奈", category:"コンソール", machineNo:12, model:"DCS-100NX", status:"warn", leaseCompany:"日立キャピタル", startDate:"2015/12/18" },
+  { id:"KW-C-014", site:"川奈", category:"コンソール", machineNo:14, model:"DCS-100NX", status:"alert",leaseCompany:"日立キャピタル", startDate:"2016/03/26" },
+  { id:"KW-C-019", site:"川奈", category:"コンソール", machineNo:19, model:"DCS-100NX", status:"warn", leaseCompany:"スルガキャピタル",startDate:"2017/07/10" },
+  { id:"KW-C-021", site:"川奈", category:"コンソール", machineNo:21, model:"DCS-100NX", status:"ok",   leaseCompany:"スルガキャピタル",startDate:"2017/07/10" },
+  { id:"KW-M-RO-01",  site:"川奈", category:"機械室", machineNo:"-", model:"FC-RE17RS", status:"ok",  leaseCompany:"ダイレクトワン",  startDate:"2024/01/20" },
+  { id:"KW-M-DAD-01", site:"川奈", category:"機械室", machineNo:"-", model:"DAD-70Si",  status:"ok",  leaseCompany:"ダイレクトワン",  startDate:"2025/06/17" },
+];
+const DEMO_HISTORY = {
+  "KW-C-014": [
+    { type:"部品交換", date:"2024/10/9",  parts:"SV8交換",              content:"減圧テスト不合格", staff:"" },
+    { type:"部品交換", date:"2024/10/7",  parts:"SV41ポペットバルブ交換", content:"減圧テスト不合格", staff:"" },
+    { type:"部品交換", date:"2024/10/4",  parts:"CF1.2・SV10交換",       content:"減圧テスト不合格 CF漏れ", staff:"" },
+    { type:"部品交換", date:"2024/9/2",   parts:"カプラ交換",             content:"プライミング時の圧保持できず", staff:"" },
+  ],
+  "KW-C-012": [
+    { type:"部品交換", date:"2024/8/17",  parts:"動脈側キャップ交換", content:"回路検出器エラー（動脈側）", staff:"" },
+    { type:"部品交換", date:"2024/8/15",  parts:"静脈側キャップ交換", content:"回路検出器エラー（静脈側）", staff:"" },
+    { type:"部品交換", date:"2024/4/2",   parts:"除水ポンプ消耗品交換", content:"除水ポンプ配管自己診断エラー", staff:"" },
+  ],
+};
+</script>
+
+<!-- Nav -->
+<div class="nav">
+  <div class="nav-brand">
+    <div class="logo">🔧</div>
+    コンソール管理
+  </div>
+  <button class="nav-back" id="nav-back" onclick="showList()">← 一覧へ</button>
+</div>
+
+<!-- 一覧画面 -->
+<div class="screen active" id="screen-list">
+  <div class="config-bar">
+    <div class="config-bar-title">🔗 GAS接続設定</div>
+    <div class="config-row">
+      <input class="config-input" id="gas-url-input" type="text" placeholder="GAS_URLをここに直接入力することもできます" />
+      <button class="btn-config-save" onclick="saveGasUrl()">保存</button>
+    </div>
+    <div class="config-status" id="config-status"></div>
+  </div>
+
+  <div class="qr-demo-bar">
+    <span class="qr-demo-label">🎮 デモ：QRスキャン → 機器選択</span>
+    <select class="qr-demo-select" id="qr-select">
+      <option value="KW-C-001">KW-C-001</option>
+      <option value="KW-C-012">KW-C-012</option>
+      <option value="KW-C-014">KW-C-014</option>
+      <option value="KW-C-019">KW-C-019</option>
+      <option value="KW-M-RO-01">KW-M-RO-01</option>
+    </select>
+    <button class="btn-scan" onclick="scanQR()">📷 スキャン</button>
+  </div>
+
+  <div class="list-header">
+    <div class="list-title">コンソール一覧</div>
+    <div class="list-stats" id="list-stats"></div>
+  </div>
+
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="filterConsoles(this,'all')">すべて</button>
+    <button class="filter-btn" onclick="filterConsoles(this,'ok')">✅ 正常</button>
+    <button class="filter-btn" onclick="filterConsoles(this,'warn')">⚠️ 要注意</button>
+    <button class="filter-btn" onclick="filterConsoles(this,'alert')">🚨 要対応</button>
+    <button class="filter-btn" onclick="filterConsoles(this,'川奈')">川奈</button>
+    <button class="filter-btn" onclick="filterConsoles(this,'伊豆高原')">伊豆高原</button>
+  </div>
+
+  <div id="console-grid" class="console-grid">
+    <div class="loading"><div class="spinner"></div>読み込み中...</div>
+  </div>
+</div>
+
+<!-- 詳細画面 -->
+<div class="screen" id="screen-detail">
+  <div class="detail-header">
+    <div class="detail-top">
+      <div>
+        <div class="detail-id" id="d-id"></div>
+        <div class="detail-model" id="d-model"></div>
+        <div class="detail-model" id="d-maker"></div>
+      </div>
+      <div class="status-badge" id="d-status"></div>
+    </div>
+    <div class="detail-meta">
+      <div><div class="meta-label">拠点</div><div class="meta-value" id="d-site"></div></div>
+      <div><div class="meta-label">機械番号</div><div class="meta-value" id="d-machineno"></div></div>
+      <div><div class="meta-label">稼働状況</div><div class="meta-value" id="d-status2"></div></div>
+      <div><div class="meta-label">リース会社</div><div class="meta-value" id="d-lease"></div></div>
+      <div><div class="meta-label">リース開始</div><div class="meta-value" id="d-leasestart"></div></div>
+      <div><div class="meta-label">買替推奨年</div><div class="meta-value" id="d-replace"></div></div>
+    </div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab(this,'tab-history')">履歴</button>
+    <button class="tab-btn" onclick="switchTab(this,'tab-inspect')">点検記録追加</button>
+    <button class="tab-btn" onclick="switchTab(this,'tab-repair')">修理・部品追加</button>
+  </div>
+
+  <div class="tab-content active" id="tab-history">
+    <div class="section-title">点検・修理・部品交換履歴</div>
+    <div class="history-list" id="history-list">
+      <div class="loading"><div class="spinner"></div>履歴を読み込み中...</div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-inspect">
+    <div class="section-title">定期点検記録を追加</div>
+    <div class="form-group"><label class="form-label">点検日</label><input type="date" class="form-input" id="i-date"></div>
+    <div class="form-group"><label class="form-label">点検種別</label>
+      <select class="form-select" id="i-type">
+        <option>定期点検</option><option>始業点検</option><option>終業点検</option><option>臨時点検</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">点検内容・所見</label><textarea class="form-textarea" id="i-content" placeholder="点検内容を入力..."></textarea></div>
+    <div class="form-group"><label class="form-label">担当者</label><input type="text" class="form-input" id="i-staff" placeholder="例：田中ME"></div>
+    <div class="form-group"><label class="form-label">次回点検予定日</label><input type="date" class="form-input" id="i-next"></div>
+    <button class="btn-submit" id="btn-inspect-submit" onclick="submitRecord('inspect')">📋 点検記録を保存</button>
+    <div id="inspect-result"></div>
+  </div>
+
+  <div class="tab-content" id="tab-repair">
+    <div class="section-title">修理・部品交換記録を追加</div>
+    <div class="form-group"><label class="form-label">対応日</label><input type="date" class="form-input" id="r-date"></div>
+    <div class="form-group"><label class="form-label">記録種別</label>
+      <select class="form-select" id="r-type">
+        <option>部品交換</option><option>アラーム対応</option><option>業者対応</option><option>その他</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">交換部品・対応内容</label><input type="text" class="form-input" id="r-parts" placeholder="例：複式ポンプ消耗品交換"></div>
+    <div class="form-group"><label class="form-label">理由・詳細</label><textarea class="form-textarea" id="r-content" placeholder="発生状況・対処内容を入力..."></textarea></div>
+    <div class="form-group"><label class="form-label">対応業者（任意）</label><input type="text" class="form-input" id="r-vendor" placeholder="例：日機装サービス"></div>
+    <div class="form-group"><label class="form-label">担当者</label><input type="text" class="form-input" id="r-staff" placeholder="例：田中ME"></div>
+    <button class="btn-submit" id="btn-repair-submit" onclick="submitRecord('repair')">🔧 修理・部品記録を保存</button>
+    <div id="repair-result"></div>
+  </div>
+</div>
+
+<!-- モーダル（未使用・将来用） -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-title"><span id="modal-title-text"></span><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ── 状態管理 ──
+let allDevices = [];
+let currentFilter = 'all';
+let currentDevice = null;
+let gasUrl = GAS_URL; // JSの定数から初期値を取得
+
+// ── 初期化 ──
+window.addEventListener('DOMContentLoaded', () => {
+  // localStorageに保存されたURLがあれば優先
+  const saved = localStorage.getItem('gasUrl');
+  if (saved) gasUrl = saved;
+
+  const input = document.getElementById('gas-url-input');
+  if (input) input.value = gasUrl;
+
+  updateConfigStatus();
+  loadDeviceList();
+
+  // 今日の日付をフォームにセット
+  const today = new Date().toISOString().split('T')[0];
+  ['i-date','r-date'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = today;
+  });
+});
+
+// ── GAS URL設定 ──
+function saveGasUrl() {
+  const val = document.getElementById('gas-url-input').value.trim();
+  gasUrl = val;
+  localStorage.setItem('gasUrl', val);
+  updateConfigStatus();
+  loadDeviceList();
+}
+
+function updateConfigStatus() {
+  const el = document.getElementById('config-status');
+  if (!gasUrl) {
+    el.className = 'config-status demo';
+    el.textContent = '⚠ GAS URLが未設定です。デモデータで動作しています。';
+  } else {
+    el.className = 'config-status ok';
+    el.textContent = '✅ GAS URL設定済み（実データで動作）';
+  }
+}
+
+// ── API呼び出し ──
+async function apiGet(params) {
+  if (!gasUrl) return null;
+  const url = gasUrl + '?' + new URLSearchParams(params).toString();
+  const res = await fetch(url);
+  return await res.json();
+}
+
+async function apiPost(body) {
+  if (!gasUrl) return { error: 'GAS URLが未設定です' };
+  const res = await fetch(gasUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  return await res.json();
+}
+
+// ── 機器一覧読み込み ──
+async function loadDeviceList() {
+  const grid = document.getElementById('console-grid');
+  grid.innerHTML = '<div class="loading"><div class="spinner"></div>読み込み中...</div>';
+
+  let devices;
+  if (gasUrl) {
+    try {
+      const data = await apiGet({ action: 'getList' });
+      devices = data.devices || [];
+    } catch(e) {
+      devices = DEMO_DEVICES;
+    }
+  } else {
+    devices = DEMO_DEVICES;
+  }
+
+  allDevices = devices;
+  renderList(currentFilter);
+}
+
+function renderList(filter) {
+  currentFilter = filter;
+  const grid = document.getElementById('console-grid');
+  const filtered = allDevices.filter(d => {
+    if (filter === 'all') return true;
+    if (['ok','warn','alert'].includes(filter)) return d.status === filter;
+    return d.site === filter;
+  });
+
+  // 統計
+  const okCount   = allDevices.filter(d => d.status === 'ok').length;
+  const warnCount = allDevices.filter(d => d.status === 'warn').length;
+  const alertCount= allDevices.filter(d => d.status === 'alert').length;
+  document.getElementById('list-stats').innerHTML = `
+    <div class="stat-chip ok">正常 ${okCount}</div>
+    <div class="stat-chip warn">要注意 ${warnCount}</div>
+    <div class="stat-chip alert">要対応 ${alertCount}</div>
+  `;
+
+  if (filtered.length === 0) {
+    grid.innerHTML = '<div class="empty-state">該当する機器がありません</div>';
+    return;
+  }
+
+  const statusLabel = { ok:'正常稼働', warn:'要注意', alert:'要対応' };
+  grid.innerHTML = filtered.map(d => `
+    <div class="console-card status-${d.status || 'ok'}" onclick="showDetail('${d.id}')">
+      <div class="card-id">${d.id}</div>
+      <div class="card-model">${d.model || ''}</div>
+      <div class="card-status ${d.status || 'ok'}">
+        <span class="status-dot"></span>${statusLabel[d.status] || '正常'}
+      </div>
+      <div class="card-model" style="margin-top:4px">${d.site || ''}</div>
+    </div>
+  `).join('');
+}
+
+function filterConsoles(btn, filter) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderList(filter);
+}
+
+// ── 機器詳細表示 ──
+async function showDetail(id) {
+  document.getElementById('screen-list').classList.remove('active');
+  document.getElementById('screen-detail').classList.add('active');
+  document.getElementById('nav-back').style.display = 'block';
+  window.scrollTo(0, 0);
+
+  // タブ初期化
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelector('.tab-btn').classList.add('active');
+  document.getElementById('tab-history').classList.add('active');
+
+  // 機器情報取得
+  let device;
+  if (gasUrl) {
+    try {
+      device = await apiGet({ action: 'getDevice', id });
+    } catch(e) {
+      device = allDevices.find(d => d.id === id) || {};
+    }
+  } else {
+    device = allDevices.find(d => d.id === id) || {};
+  }
+
+  currentDevice = device;
+
+  const statusMap = { ok:['ok','✅ 正常'], warn:['warn','⚠️ 要注意'], alert:['alert','🚨 要対応'] };
+  const [cls, lbl] = statusMap[device.status] || ['ok','✅ 正常'];
+
+  document.getElementById('d-id').textContent       = device.id || id;
+  document.getElementById('d-model').textContent    = device.model || '';
+  document.getElementById('d-site').textContent     = device.site || '';
+  document.getElementById('d-machineno').textContent= device.machineNo !== undefined ? device.machineNo : '-';
+  document.getElementById('d-lease').textContent    = device.leaseCompany || '-';
+  document.getElementById('d-leasestart').textContent = device.startDate || '-';
+  document.getElementById('d-replace').textContent  = device.replaceYear || '-';
+  document.getElementById('d-status2').textContent  = device.status === 'ok' ? '稼働中' : device.status === 'warn' ? '要注意' : '要対応';
+
+  const badge = document.getElementById('d-status');
+  badge.className = 'status-badge ' + cls;
+  badge.textContent = lbl;
+
+  // 履歴読み込み
+  loadHistory(id);
+}
+
+async function loadHistory(id) {
+  const list = document.getElementById('history-list');
+  list.innerHTML = '<div class="loading"><div class="spinner"></div>読み込み中...</div>';
+
+  let records;
+  if (gasUrl) {
+    try {
+      const data = await apiGet({ action: 'getHistory', id });
+      records = data.records || [];
+    } catch(e) {
+      records = DEMO_HISTORY[id] || [];
+    }
+  } else {
+    records = DEMO_HISTORY[id] || [];
+  }
+
+  if (records.length === 0) {
+    list.innerHTML = '<div class="empty-state">記録がありません</div>';
+    return;
+  }
+
+  const typeClass = { '定期点検':'type-inspect', '部品交換':'type-consumable', 'アラーム対応':'type-trouble', '業者対応':'type-repair' };
+  list.innerHTML = records.map(r => `
+    <div class="history-item">
+      <div class="history-top">
+        <span class="history-type ${typeClass[r.type] || 'type-consumable'}">${r.type || ''}</span>
+        <span class="history-date">${r.date || ''}</span>
+      </div>
+      <div class="history-content">${r.parts ? r.parts + '　' : ''}${r.content || ''}</div>
+      <div class="history-staff">${r.vendor ? '業者: ' + r.vendor + '　' : ''}${r.staff ? '担当: ' + r.staff : ''}</div>
+    </div>
+  `).join('');
+}
+
+// ── 記録保存 ──
+async function submitRecord(type) {
+  const isInspect = type === 'inspect';
+  const btnId = isInspect ? 'btn-inspect-submit' : 'btn-repair-submit';
+  const resultId = isInspect ? 'inspect-result' : 'repair-result';
+  const btn = document.getElementById(btnId);
+  const resultEl = document.getElementById(resultId);
+
+  const date    = document.getElementById(isInspect ? 'i-date' : 'r-date').value;
+  const content = document.getElementById(isInspect ? 'i-content' : 'r-content').value;
+  const staff   = document.getElementById(isInspect ? 'i-staff' : 'r-staff').value;
+
+  if (!date || !content) {
+    resultEl.className = 'save-result ng';
+    resultEl.textContent = '日付と内容は必須です';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '保存中...';
+
+  const payload = isInspect ? {
+    action: 'addRecord',
+    recordType: '点検',
+    deviceId:    currentDevice?.id || '',
+    site:        currentDevice?.site || '',
+    model:       currentDevice?.model || '',
+    date,
+    inspectType: document.getElementById('i-type').value,
+    content,
+    staff,
+    nextDate: document.getElementById('i-next').value,
+  } : {
+    action: 'addRecord',
+    recordType:  document.getElementById('r-type').value,
+    deviceId:    currentDevice?.id || '',
+    site:        currentDevice?.site || '',
+    machineNo:   currentDevice?.machineNo || '',
+    model:       currentDevice?.model || '',
+    date,
+    parts:   document.getElementById('r-parts').value,
+    content,
+    vendor:  document.getElementById('r-vendor').value,
+    staff,
+  };
+
+  try {
+    const result = await apiPost(payload);
+    if (result.success) {
+      resultEl.className = 'save-result ok';
+      resultEl.textContent = '✅ 保存しました！スプレッドシートに反映されています。';
+      // 履歴を再読み込み
+      loadHistory(currentDevice?.id);
+    } else {
+      throw new Error(result.error || '保存に失敗しました');
+    }
+  } catch(e) {
+    if (!gasUrl) {
+      // デモモード：保存成功を模擬
+      resultEl.className = 'save-result ok';
+      resultEl.textContent = '✅ （デモ）保存しました。GAS URL設定後は実際のスプレッドシートに保存されます。';
+    } else {
+      resultEl.className = 'save-result ng';
+      resultEl.textContent = '❌ エラー: ' + e.message;
+    }
+  }
+
+  btn.disabled = false;
+  btn.textContent = isInspect ? '📋 点検記録を保存' : '🔧 修理・部品記録を保存';
+}
+
+// ── その他 ──
+function showList() {
+  document.getElementById('screen-detail').classList.remove('active');
+  document.getElementById('screen-list').classList.add('active');
+  document.getElementById('nav-back').style.display = 'none';
+}
+
+function switchTab(btn, tabId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+}
+
+function scanQR() {
+  const id = document.getElementById('qr-select').value;
+  showDetail(id);
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+document.getElementById('modal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+</script>
+</body>
+</html>
