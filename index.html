@@ -331,12 +331,12 @@ let gasUrl = GAS_URL; // JSの定数から初期値を取得
 
 // ── 初期化 ──
 window.addEventListener('DOMContentLoaded', () => {
-  // localStorageに保存されたURLがあれば優先
+  // localStorageに保存されたURLがあれば優先（空文字は無視）
   const saved = localStorage.getItem('gasUrl');
-  if (saved) gasUrl = saved;
+  if (saved && saved.trim() !== '') gasUrl = saved.trim();
 
   const input = document.getElementById('gas-url-input');
-  if (input) input.value = gasUrl;
+  if (input) input.value = gasUrl || '';
 
   updateConfigStatus();
   loadDeviceList();
@@ -392,20 +392,20 @@ async function loadDeviceList() {
   const grid = document.getElementById('console-grid');
   grid.innerHTML = '<div class="loading"><div class="spinner"></div>読み込み中...</div>';
 
-  let devices;
-  if (gasUrl) {
+  let devices = DEMO_DEVICES; // デフォルトは必ずデモデータ
+  if (gasUrl && gasUrl.trim() !== '') {
     try {
       const data = await apiGet({ action: 'getList' });
-      devices = data.devices || [];
+      if (data && data.devices && data.devices.length > 0) {
+        devices = data.devices;
+      }
     } catch(e) {
-      devices = DEMO_DEVICES;
+      console.warn('GAS接続失敗、デモデータを使用:', e);
     }
-  } else {
-    devices = DEMO_DEVICES;
   }
 
   allDevices = devices;
-  renderList(currentFilter);
+  renderList('all'); // 必ずallで初期表示
 }
 
 function renderList(filter) {
