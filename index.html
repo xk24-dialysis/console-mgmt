@@ -5,10 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>透析コンソール管理システム</title>
 <style>
-/* ════════════════════════════════ */
-/* ★ STEP7で変更が必要な箇所はここだけ */
-/* ════════════════════════════════ */
-
 :root {
   --bg: #0d1117;
   --surface: #161b22;
@@ -27,20 +23,21 @@
   --purple: #a371f7;
   --orange: #f0883e;
 }
-
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
-.nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 16px; height: 52px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
-.nav-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; }
+.nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 16px; height: 52px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; gap: 8px; }
+.nav-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; cursor: pointer; flex-shrink: 0; }
 .nav-brand .logo { width: 28px; height: 28px; background: var(--blue); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
-.nav-back { background: none; border: 1px solid var(--border); color: var(--text2); padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; display: none; }
+.nav-links { display: flex; gap: 4px; }
+.nav-link { background: none; border: 1px solid var(--border); color: var(--text2); padding: 5px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.nav-link:hover { color: var(--text); border-color: var(--text2); }
+.nav-back { background: none; border: 1px solid var(--border); color: var(--text2); padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; display: none; white-space: nowrap; }
 .nav-back:hover { color: var(--text); border-color: var(--text2); }
 
 .screen { display: none; }
 .screen.active { display: block; }
 
-/* 接続設定バー */
 .config-bar { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; margin: 16px 16px 0; padding: 12px 14px; }
 .config-bar-title { font-size: 11px; color: var(--text2); font-weight: 700; margin-bottom: 8px; }
 .config-row { display: flex; gap: 8px; align-items: center; }
@@ -51,6 +48,21 @@ body { font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif; background: var
 .config-status.ok { color: var(--green); }
 .config-status.ng { color: var(--red); }
 .config-status.demo { color: var(--yellow); }
+
+/* 今月の予定 */
+.schedule-section { margin: 16px 16px 0; }
+.schedule-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.schedule-title { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.schedule-badge { background: var(--blue-dim); color: var(--blue); border: 1px solid var(--blue); border-radius: 10px; font-size: 10px; font-weight: 700; padding: 1px 7px; }
+.schedule-list { display: flex; flex-direction: column; gap: 6px; }
+.schedule-item { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.schedule-item:hover { border-color: var(--blue); }
+.schedule-item-date { font-size: 13px; font-weight: 700; color: var(--blue); min-width: 52px; }
+.schedule-item-date.overdue { color: var(--red); }
+.schedule-item-body { flex: 1; }
+.schedule-item-device { font-size: 13px; font-weight: 700; }
+.schedule-item-type { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.schedule-empty { text-align: center; padding: 14px; color: var(--text2); font-size: 13px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
 
 /* 一覧 */
 .list-header { padding: 16px 16px 10px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
@@ -73,7 +85,8 @@ body { font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif; background: var
 .console-card.status-warn::before { background: var(--yellow); }
 .console-card.status-alert::before { background: var(--red); }
 .console-card:hover { border-color: var(--blue); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(47,129,247,0.15); }
-.card-id { font-size: 16px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 2px; }
+.card-id { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 1px; }
+.card-sub { font-size: 10px; color: var(--text2); margin-bottom: 6px; font-family: monospace; }
 .card-model { font-size: 10px; color: var(--text2); margin-bottom: 8px; }
 .card-status { font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
 .card-status.ok { color: var(--green); }
@@ -84,7 +97,6 @@ body { font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif; background: var
 .warn .status-dot { background: var(--yellow); }
 .alert .status-dot { background: var(--red); }
 
-/* ローディング */
 .loading { text-align: center; padding: 40px; color: var(--text2); font-size: 13px; }
 .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -92,12 +104,25 @@ body { font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif; background: var
 /* 詳細 */
 .detail-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px; }
 .detail-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
-.detail-id { font-size: 26px; font-weight: 700; letter-spacing: -1px; }
+.detail-id { font-size: 28px; font-weight: 700; letter-spacing: -1px; }
+.detail-subid { font-size: 11px; color: var(--text2); margin-top: 1px; font-family: monospace; }
 .detail-model { font-size: 13px; color: var(--text2); margin-top: 2px; }
 .status-badge { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid; }
 .status-badge.ok { color: var(--green); border-color: var(--green); background: var(--green-dim); }
 .status-badge.warn { color: var(--yellow); border-color: var(--yellow); background: var(--yellow-dim); }
 .status-badge.alert { color: var(--red); border-color: var(--red); background: var(--red-dim); }
+
+/* 稼働状況切り替えボタン */
+.status-toggle { display: flex; gap: 6px; margin-bottom: 12px; }
+.status-toggle-btn { flex: 1; padding: 8px 4px; border-radius: 8px; border: 1px solid var(--border); background: none; color: var(--text2); font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.status-toggle-btn.active-ok   { background: var(--green-dim);  border-color: var(--green);  color: var(--green); }
+.status-toggle-btn.active-warn { background: var(--yellow-dim); border-color: var(--yellow); color: var(--yellow); }
+.status-toggle-btn.active-alert{ background: var(--red-dim);    border-color: var(--red);    color: var(--red); }
+.status-toggle-btn:hover:not([class*="active"]) { border-color: var(--text2); color: var(--text); }
+.status-update-msg { font-size: 11px; text-align: center; margin-bottom: 8px; min-height: 16px; }
+.status-update-msg.ok { color: var(--green); }
+.status-update-msg.ng { color: var(--red); }
+
 .detail-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .meta-label { font-size: 10px; color: var(--text2); margin-bottom: 2px; }
 .meta-value { font-size: 13px; font-weight: 600; }
@@ -119,17 +144,17 @@ body { font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif; background: var
 .history-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
 .history-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
 .history-type { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
-.type-inspect { background: rgba(47,129,247,0.15); color: var(--blue); }
-.type-trouble { background: rgba(248,81,73,0.15); color: var(--red); }
+.type-inspect    { background: rgba(47,129,247,0.15); color: var(--blue); }
+.type-trouble    { background: rgba(248,81,73,0.15);  color: var(--red); }
 .type-consumable { background: rgba(240,136,62,0.15); color: var(--orange); }
-.type-repair { background: rgba(163,113,247,0.15); color: var(--purple); }
-.history-date { font-size: 11px; color: var(--text2); }
+.type-repair     { background: rgba(163,113,247,0.15);color: var(--purple); }
+.history-date    { font-size: 11px; color: var(--text2); }
 .history-content { font-size: 13px; line-height: 1.5; }
-.history-staff { font-size: 11px; color: var(--text2); margin-top: 4px; }
+.history-staff   { font-size: 11px; color: var(--text2); margin-top: 4px; }
+.history-next    { font-size: 11px; color: var(--blue); margin-top: 4px; }
 
 .empty-state { text-align: center; padding: 32px 16px; color: var(--text2); font-size: 13px; }
 
-/* モーダル */
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: flex-end; justify-content: center; }
 .modal-overlay.open { display: flex; }
 .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px 16px 0 0; padding: 20px 16px 32px; width: 100%; max-width: 500px; max-height: 85vh; overflow-y: auto; animation: slideup 0.25s ease; }
@@ -146,7 +171,6 @@ body { font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif; background: var
 .btn-submit:hover { opacity: 0.9; }
 .btn-submit:disabled { opacity: 0.5; cursor: default; }
 
-/* QRデモバー */
 .qr-demo-bar { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin: 16px 16px 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .qr-demo-label { font-size: 11px; color: var(--text2); flex: 1; min-width: 120px; }
 .qr-demo-select { background: var(--blue-dim); border: 1px solid var(--blue); border-radius: 6px; color: var(--blue); font-size: 12px; padding: 5px 8px; font-family: inherit; cursor: pointer; font-weight: 600; }
@@ -155,58 +179,112 @@ body { font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif; background: var
 .save-result { text-align: center; padding: 8px; font-size: 13px; border-radius: 8px; margin-top: 8px; }
 .save-result.ok { background: var(--green-dim); color: var(--green); }
 .save-result.ng { background: var(--red-dim); color: var(--red); }
+
+/* 履歴一覧・買替推奨年ページ共通 */
+.page-header { padding: 16px; border-bottom: 1px solid var(--border); }
+.page-title { font-size: 18px; font-weight: 700; }
+.page-subtitle { font-size: 12px; color: var(--text2); margin-top: 4px; }
+.sort-bar { padding: 10px 16px; display: flex; gap: 8px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.sort-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: none; color: var(--text2); font-size: 12px; cursor: pointer; white-space: nowrap; font-family: inherit; transition: all 0.15s; }
+.sort-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+/* 全履歴 */
+.all-history-list { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.history-item-device { font-size: 11px; font-weight: 700; color: var(--blue); margin-bottom: 4px; }
+.history-group-label { font-size: 13px; font-weight: 700; color: var(--blue); padding: 6px 0; border-bottom: 1px solid var(--border); margin-bottom: 8px; cursor: pointer; }
+.history-group-label:hover { color: var(--text); }
+.history-group { margin-bottom: 20px; }
+
+/* 買替推奨年 */
+.replace-list { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.replace-item { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; display: flex; align-items: center; gap: 14px; cursor: pointer; transition: all 0.15s; }
+.replace-item:hover { border-color: var(--blue); }
+.replace-year-badge { font-size: 22px; font-weight: 700; min-width: 56px; text-align: center; }
+.replace-year-badge.past  { color: var(--red); }
+.replace-year-badge.soon  { color: var(--yellow); }
+.replace-year-badge.future{ color: var(--green); }
+.replace-item-info { flex: 1; }
+.replace-item-machine { font-size: 15px; font-weight: 700; }
+.replace-item-id    { font-size: 11px; color: var(--text2); margin-top: 2px; font-family: monospace; }
+.replace-item-model { font-size: 12px; color: var(--text2); }
+.replace-item-lease { font-size: 11px; color: var(--text2); margin-top: 4px; }
+.replace-year-label { font-size: 10px; color: var(--text2); margin-bottom: 2px; }
 </style>
 </head>
 <body>
 
 <script>
 // ════════════════════════════════════════════════════════════
-// ★ STEP7で変更する箇所はここだけ！
-//   GASをデプロイした後に発行されたURLを下記に貼り付けてください。
+// ★ GASをデプロイした後に発行されたURLを下記に貼り付けてください。
 // ════════════════════════════════════════════════════════════
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwQM4hpOzgmQq5v3dZ9Sl-2OBJY_gMcL0us3O__NMpdX7W1gkSu1NrVxZ7rU4TRVBsA/exec"; // ← ここにGASのURLを貼り付ける
-// 例: const GAS_URL = "https://script.google.com/macros/s/AaBbCcDd.../exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwQM4hpOzgmQq5v3dZ9Sl-2OBJY_gMcL0us3O__NMpdX7W1gkSu1NrVxZ7rU4TRVBsA/exec";
 // ════════════════════════════════════════════════════════════
 
-// GAS_URLが空の場合はデモモードで動作
 const IS_DEMO = !GAS_URL;
 
-// ── デモ用データ（GAS_URLが未設定の場合に使用）──
 const DEMO_DEVICES = [
-  { id:"KW-C-001", site:"川奈", category:"コンソール", machineNo:1,  model:"DCS-200Si", status:"ok",   leaseCompany:"静銀リース",     startDate:"2023/05/31" },
-  { id:"KW-C-002", site:"川奈", category:"コンソール", machineNo:2,  model:"DCS-200Si", status:"ok",   leaseCompany:"静銀リース",     startDate:"2023/05/31" },
-  { id:"KW-C-012", site:"川奈", category:"コンソール", machineNo:12, model:"DCS-100NX", status:"warn", leaseCompany:"日立キャピタル", startDate:"2015/12/18" },
-  { id:"KW-C-014", site:"川奈", category:"コンソール", machineNo:14, model:"DCS-100NX", status:"alert",leaseCompany:"日立キャピタル", startDate:"2016/03/26" },
-  { id:"KW-C-019", site:"川奈", category:"コンソール", machineNo:19, model:"DCS-100NX", status:"warn", leaseCompany:"スルガキャピタル",startDate:"2017/07/10" },
-  { id:"KW-C-021", site:"川奈", category:"コンソール", machineNo:21, model:"DCS-100NX", status:"ok",   leaseCompany:"スルガキャピタル",startDate:"2017/07/10" },
-  { id:"KW-M-RO-01",  site:"川奈", category:"機械室", machineNo:"-", model:"FC-RE17RS", status:"ok",  leaseCompany:"ダイレクトワン",  startDate:"2024/01/20" },
-  { id:"KW-M-DAD-01", site:"川奈", category:"機械室", machineNo:"-", model:"DAD-70Si",  status:"ok",  leaseCompany:"ダイレクトワン",  startDate:"2025/06/17" },
+  { id:"KW-C-001", site:"川奈", category:"コンソール", machineNo:1,  model:"DCS-200Si", status:"ok",   leaseCompany:"静銀リース",     startDate:"2023/05/31", replaceYear:2030 },
+  { id:"KW-C-002", site:"川奈", category:"コンソール", machineNo:2,  model:"DCS-200Si", status:"ok",   leaseCompany:"静銀リース",     startDate:"2023/05/31", replaceYear:2030 },
+  { id:"KW-C-012", site:"川奈", category:"コンソール", machineNo:12, model:"DCS-100NX", status:"warn", leaseCompany:"日立キャピタル", startDate:"2015/12/18", replaceYear:2023 },
+  { id:"KW-C-014", site:"川奈", category:"コンソール", machineNo:14, model:"DCS-100NX", status:"alert",leaseCompany:"日立キャピタル", startDate:"2016/03/26", replaceYear:2023 },
+  { id:"KW-C-019", site:"川奈", category:"コンソール", machineNo:19, model:"DCS-100NX", status:"warn", leaseCompany:"スルガキャピタル",startDate:"2017/07/10", replaceYear:2024 },
+  { id:"KW-C-021", site:"川奈", category:"コンソール", machineNo:21, model:"DCS-100NX", status:"ok",   leaseCompany:"スルガキャピタル",startDate:"2017/07/10", replaceYear:2024 },
+  { id:"KW-M-RO-01",  site:"川奈", category:"機械室", machineNo:"-", model:"FC-RE17RS", status:"ok",  leaseCompany:"ダイレクトワン",  startDate:"2024/01/20", replaceYear:2031 },
+  { id:"KW-M-DAD-01", site:"川奈", category:"機械室", machineNo:"-", model:"DAD-70Si",  status:"ok",  leaseCompany:"ダイレクトワン",  startDate:"2025/06/17", replaceYear:2032 },
 ];
+
 const DEMO_HISTORY = {
   "KW-C-014": [
-    { type:"部品交換", date:"2024/10/9",  parts:"SV8交換",              content:"減圧テスト不合格", staff:"" },
-    { type:"部品交換", date:"2024/10/7",  parts:"SV41ポペットバルブ交換", content:"減圧テスト不合格", staff:"" },
-    { type:"部品交換", date:"2024/10/4",  parts:"CF1.2・SV10交換",       content:"減圧テスト不合格 CF漏れ", staff:"" },
-    { type:"部品交換", date:"2024/9/2",   parts:"カプラ交換",             content:"プライミング時の圧保持できず", staff:"" },
+    { type:"部品交換", date:"2024/10/9",  parts:"SV8交換",               content:"減圧テスト不合格",             staff:"", nextDate:"2026/04/09" },
+    { type:"部品交換", date:"2024/10/7",  parts:"SV41ポペットバルブ交換", content:"減圧テスト不合格",             staff:"" },
+    { type:"部品交換", date:"2024/10/4",  parts:"CF1.2・SV10交換",        content:"減圧テスト不合格 CF漏れ",      staff:"" },
+    { type:"部品交換", date:"2024/9/2",   parts:"カプラ交換",              content:"プライミング時の圧保持できず", staff:"" },
   ],
   "KW-C-012": [
-    { type:"部品交換", date:"2024/8/17",  parts:"動脈側キャップ交換", content:"回路検出器エラー（動脈側）", staff:"" },
-    { type:"部品交換", date:"2024/8/15",  parts:"静脈側キャップ交換", content:"回路検出器エラー（静脈側）", staff:"" },
-    { type:"部品交換", date:"2024/4/2",   parts:"除水ポンプ消耗品交換", content:"除水ポンプ配管自己診断エラー", staff:"" },
+    { type:"部品交換", date:"2024/8/17",  parts:"動脈側キャップ交換",    content:"回路検出器エラー（動脈側）",          staff:"" },
+    { type:"部品交換", date:"2024/8/15",  parts:"静脈側キャップ交換",    content:"回路検出器エラー（静脈側）",          staff:"" },
+    { type:"部品交換", date:"2024/4/2",   parts:"除水ポンプ消耗品交換",  content:"除水ポンプ配管自己診断エラー",        staff:"" },
   ],
 };
+
+// 今月の予定デモ（2026/03）
+const DEMO_SCHEDULE = [
+  { deviceId:"KW-C-001", machineNo:1,  model:"DCS-200Si", site:"川奈", type:"定期点検", nextDate:"2026/03/25", content:"定期点検予定" },
+  { deviceId:"KW-C-019", machineNo:19, model:"DCS-100NX", site:"川奈", type:"部品交換", nextDate:"2026/03/28", parts:"カプラ定期交換", content:"6ヶ月定期部品交換" },
+  { deviceId:"KW-C-021", machineNo:21, model:"DCS-100NX", site:"川奈", type:"定期点検", nextDate:"2026/03/31", content:"定期点検予定" },
+];
+
+// 全履歴デモ
+const DEMO_ALL_HISTORY = [
+  { deviceId:"KW-C-001", machineNo:1,  type:"定期点検", date:"2025/09/25", content:"定期点検実施 異常なし",          staff:"田中ME", nextDate:"2026/03/25" },
+  { deviceId:"KW-C-002", machineNo:2,  type:"定期点検", date:"2025/10/10", content:"定期点検実施 異常なし",          staff:"鈴木ME" },
+  { deviceId:"KW-C-012", machineNo:12, type:"部品交換", date:"2024/08/17", parts:"動脈側キャップ交換", content:"回路検出器エラー（動脈側）", staff:"田中ME" },
+  { deviceId:"KW-C-012", machineNo:12, type:"部品交換", date:"2024/08/15", parts:"静脈側キャップ交換", content:"回路検出器エラー（静脈側）", staff:"田中ME" },
+  { deviceId:"KW-C-012", machineNo:12, type:"部品交換", date:"2024/04/02", parts:"除水ポンプ消耗品交換", content:"除水ポンプ配管自己診断エラー", staff:"鈴木ME" },
+  { deviceId:"KW-C-014", machineNo:14, type:"部品交換", date:"2024/10/09", parts:"SV8交換",               content:"減圧テスト不合格",             staff:"" },
+  { deviceId:"KW-C-014", machineNo:14, type:"部品交換", date:"2024/10/07", parts:"SV41ポペットバルブ交換", content:"減圧テスト不合格",             staff:"" },
+  { deviceId:"KW-C-014", machineNo:14, type:"部品交換", date:"2024/10/04", parts:"CF1.2・SV10交換",        content:"減圧テスト不合格 CF漏れ",      staff:"" },
+  { deviceId:"KW-C-014", machineNo:14, type:"部品交換", date:"2024/09/02", parts:"カプラ交換",              content:"プライミング時の圧保持できず", staff:"" },
+  { deviceId:"KW-C-019", machineNo:19, type:"定期点検", date:"2025/09/28", content:"定期点検実施",          staff:"田中ME", nextDate:"2026/03/28" },
+  { deviceId:"KW-C-021", machineNo:21, type:"定期点検", date:"2025/09/30", content:"定期点検実施 異常なし", staff:"鈴木ME", nextDate:"2026/03/31" },
+  { deviceId:"KW-M-RO-01", machineNo:"-", type:"定期点検", date:"2025/07/20", content:"RO装置定期点検 フィルター交換", staff:"日機装サービス" },
+];
 </script>
 
 <!-- Nav -->
 <div class="nav">
-  <div class="nav-brand">
+  <div class="nav-brand" onclick="showScreen('screen-list')">
     <div class="logo">🔧</div>
     コンソール管理
   </div>
-  <button class="nav-back" id="nav-back" onclick="showList()">← 一覧へ</button>
+  <div class="nav-links" id="nav-links">
+    <button class="nav-link" onclick="showScreen('screen-all-history')">履歴一覧</button>
+    <button class="nav-link" onclick="showScreen('screen-replace-years')">買替推奨年</button>
+  </div>
+  <button class="nav-back" id="nav-back" onclick="showScreen('screen-list')">← 一覧へ</button>
 </div>
 
-<!-- 一覧画面 -->
+<!-- ═══ 一覧画面 ═══ -->
 <div class="screen active" id="screen-list">
   <div class="config-bar" style="display:none">
     <div class="config-bar-title">🔗 GAS接続設定</div>
@@ -229,6 +307,14 @@ const DEMO_HISTORY = {
     <button class="btn-scan" onclick="scanQR()">📷 スキャン</button>
   </div>
 
+  <!-- 今月の予定 -->
+  <div class="schedule-section">
+    <div class="schedule-header">
+      <div class="schedule-title">📅 今月の予定 <span class="schedule-badge" id="schedule-count">0</span></div>
+    </div>
+    <div id="schedule-list"><div class="loading"><div class="spinner"></div>読み込み中...</div></div>
+  </div>
+
   <div class="list-header">
     <div class="list-title">コンソール一覧</div>
     <div class="list-stats" id="list-stats"></div>
@@ -248,20 +334,27 @@ const DEMO_HISTORY = {
   </div>
 </div>
 
-<!-- 詳細画面 -->
+<!-- ═══ 詳細画面 ═══ -->
 <div class="screen" id="screen-detail">
   <div class="detail-header">
     <div class="detail-top">
       <div>
         <div class="detail-id" id="d-id"></div>
+        <div class="detail-subid" id="d-subid"></div>
         <div class="detail-model" id="d-model"></div>
-        <div class="detail-model" id="d-maker"></div>
       </div>
       <div class="status-badge" id="d-status"></div>
     </div>
+    <!-- 稼働状況切り替え -->
+    <div class="status-toggle">
+      <button class="status-toggle-btn" id="btn-status-ok"    onclick="updateStatus('ok')">✅ 稼働中</button>
+      <button class="status-toggle-btn" id="btn-status-warn"  onclick="updateStatus('warn')">⚠️ 要注意</button>
+      <button class="status-toggle-btn" id="btn-status-alert" onclick="updateStatus('alert')">🚨 要対応</button>
+    </div>
+    <div class="status-update-msg" id="status-update-msg"></div>
     <div class="detail-meta">
       <div><div class="meta-label">拠点</div><div class="meta-value" id="d-site"></div></div>
-      <div><div class="meta-label">機械番号</div><div class="meta-value" id="d-machineno"></div></div>
+      <div><div class="meta-label">機器ID</div><div class="meta-value" id="d-deviceid" style="font-size:11px;word-break:break-all"></div></div>
       <div><div class="meta-label">稼働状況</div><div class="meta-value" id="d-status2"></div></div>
       <div><div class="meta-label">リース会社</div><div class="meta-value" id="d-lease"></div></div>
       <div><div class="meta-label">リース開始</div><div class="meta-value" id="d-leasestart"></div></div>
@@ -309,12 +402,39 @@ const DEMO_HISTORY = {
     <div class="form-group"><label class="form-label">理由・詳細</label><textarea class="form-textarea" id="r-content" placeholder="発生状況・対処内容を入力..."></textarea></div>
     <div class="form-group"><label class="form-label">対応業者（任意）</label><input type="text" class="form-input" id="r-vendor" placeholder="例：日機装サービス"></div>
     <div class="form-group"><label class="form-label">担当者</label><input type="text" class="form-input" id="r-staff" placeholder="例：田中ME"></div>
+    <div class="form-group"><label class="form-label">次回予定日（任意）</label><input type="date" class="form-input" id="r-next"></div>
     <button class="btn-submit" id="btn-repair-submit" onclick="submitRecord('repair')">🔧 修理・部品記録を保存</button>
     <div id="repair-result"></div>
   </div>
 </div>
 
-<!-- モーダル（未使用・将来用） -->
+<!-- ═══ 履歴一覧画面 ═══ -->
+<div class="screen" id="screen-all-history">
+  <div class="page-header">
+    <div class="page-title">履歴一覧</div>
+    <div class="page-subtitle">全機器の点検・修理記録</div>
+  </div>
+  <div class="sort-bar">
+    <button class="sort-btn active" id="sort-btn-timeline" onclick="sortAllHistory('timeline')">🕐 時系列</button>
+    <button class="sort-btn" id="sort-btn-device" onclick="sortAllHistory('device')">🔧 機器別</button>
+  </div>
+  <div id="all-history-list" class="all-history-list">
+    <div class="loading"><div class="spinner"></div>読み込み中...</div>
+  </div>
+</div>
+
+<!-- ═══ 買替推奨年画面 ═══ -->
+<div class="screen" id="screen-replace-years">
+  <div class="page-header">
+    <div class="page-title">買替推奨年一覧</div>
+    <div class="page-subtitle">リース管理シートより ／ 時系列順</div>
+  </div>
+  <div id="replace-years-list" class="replace-list">
+    <div class="loading"><div class="spinner"></div>読み込み中...</div>
+  </div>
+</div>
+
+<!-- モーダル -->
 <div class="modal-overlay" id="modal">
   <div class="modal">
     <div class="modal-title"><span id="modal-title-text"></span><button class="modal-close" onclick="closeModal()">×</button></div>
@@ -327,11 +447,13 @@ const DEMO_HISTORY = {
 let allDevices = [];
 let currentFilter = 'all';
 let currentDevice = null;
-let gasUrl = GAS_URL; // JSの定数から初期値を取得
+let gasUrl = GAS_URL;
+let allHistoryData = [];
+let allHistorySort = 'timeline';
+let allHistoryLoaded = false;
 
 // ── 初期化 ──
 window.addEventListener('DOMContentLoaded', () => {
-  // localStorageに保存されたURLがあれば優先（空文字は無視）
   const saved = localStorage.getItem('gasUrl');
   if (saved && saved.trim() !== '') gasUrl = saved.trim();
 
@@ -340,14 +462,29 @@ window.addEventListener('DOMContentLoaded', () => {
 
   updateConfigStatus();
   loadDeviceList();
+  loadSchedule();
 
-  // 今日の日付をフォームにセット
   const today = new Date().toISOString().split('T')[0];
   ['i-date','r-date'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = today;
   });
 });
+
+// ── 画面切り替え ──
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+
+  const isDetail = id === 'screen-detail';
+  document.getElementById('nav-back').style.display  = isDetail ? 'block' : 'none';
+  document.getElementById('nav-links').style.display = isDetail ? 'none'  : 'flex';
+
+  window.scrollTo(0, 0);
+
+  if (id === 'screen-all-history')  loadAllHistory();
+  if (id === 'screen-replace-years') loadReplaceYears();
+}
 
 // ── GAS URL設定 ──
 function saveGasUrl() {
@@ -392,20 +529,18 @@ async function loadDeviceList() {
   const grid = document.getElementById('console-grid');
   grid.innerHTML = '<div class="loading"><div class="spinner"></div>読み込み中...</div>';
 
-  let devices = DEMO_DEVICES; // デフォルトは必ずデモデータ
+  let devices = DEMO_DEVICES;
   if (gasUrl && gasUrl.trim() !== '') {
     try {
       const data = await apiGet({ action: 'getList' });
-      if (data && data.devices && data.devices.length > 0) {
-        devices = data.devices;
-      }
+      if (data && data.devices && data.devices.length > 0) devices = data.devices;
     } catch(e) {
       console.warn('GAS接続失敗、デモデータを使用:', e);
     }
   }
 
   allDevices = devices;
-  renderList('all'); // 必ずallで初期表示
+  renderList('all');
 }
 
 function renderList(filter) {
@@ -417,10 +552,9 @@ function renderList(filter) {
     return d.site === filter;
   });
 
-  // 統計
-  const okCount   = allDevices.filter(d => d.status === 'ok').length;
-  const warnCount = allDevices.filter(d => d.status === 'warn').length;
-  const alertCount= allDevices.filter(d => d.status === 'alert').length;
+  const okCount    = allDevices.filter(d => d.status === 'ok').length;
+  const warnCount  = allDevices.filter(d => d.status === 'warn').length;
+  const alertCount = allDevices.filter(d => d.status === 'alert').length;
   document.getElementById('list-stats').innerHTML = `
     <div class="stat-chip ok">正常 ${okCount}</div>
     <div class="stat-chip warn">要注意 ${warnCount}</div>
@@ -433,16 +567,22 @@ function renderList(filter) {
   }
 
   const statusLabel = { ok:'正常稼働', warn:'要注意', alert:'要対応' };
-  grid.innerHTML = filtered.map(d => `
-    <div class="console-card status-${d.status || 'ok'}" onclick="showDetail('${d.id}')">
-      <div class="card-id">${d.id}</div>
-      <div class="card-model">${d.model || ''}</div>
-      <div class="card-status ${d.status || 'ok'}">
-        <span class="status-dot"></span>${statusLabel[d.status] || '正常'}
+  grid.innerHTML = filtered.map(d => {
+    const hasMachineNo = d.machineNo !== undefined && d.machineNo !== null && d.machineNo !== '-';
+    const bigText = hasMachineNo ? 'No.' + d.machineNo : d.id;
+    const subText = hasMachineNo ? d.id : '';
+    return `
+      <div class="console-card status-${d.status || 'ok'}" onclick="showDetail('${d.id}')">
+        <div class="card-id">${bigText}</div>
+        ${subText ? `<div class="card-sub">${subText}</div>` : ''}
+        <div class="card-model">${d.model || ''}</div>
+        <div class="card-status ${d.status || 'ok'}">
+          <span class="status-dot"></span>${statusLabel[d.status] || '正常'}
+        </div>
+        <div class="card-model" style="margin-top:4px">${d.site || ''}</div>
       </div>
-      <div class="card-model" style="margin-top:4px">${d.site || ''}</div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 function filterConsoles(btn, filter) {
@@ -451,11 +591,54 @@ function filterConsoles(btn, filter) {
   renderList(filter);
 }
 
+// ── 今月の予定 ──
+async function loadSchedule() {
+  const list = document.getElementById('schedule-list');
+  const countBadge = document.getElementById('schedule-count');
+
+  let schedules = DEMO_SCHEDULE;
+  if (gasUrl) {
+    try {
+      const data = await apiGet({ action: 'getSchedule' });
+      if (data && data.schedules) schedules = data.schedules;
+    } catch(e) {
+      schedules = DEMO_SCHEDULE;
+    }
+  }
+
+  countBadge.textContent = schedules.length;
+
+  if (schedules.length === 0) {
+    list.innerHTML = '<div class="schedule-empty">今月の予定はありません</div>';
+    return;
+  }
+
+  const today = new Date();
+  list.innerHTML = schedules.map(s => {
+    const d = new Date(s.nextDate.replace(/\//g, '-'));
+    const isOverdue = d < today;
+    const mmdd = s.nextDate.slice(5).replace('/', '/');
+    const hasMachineNo = s.machineNo !== undefined && s.machineNo !== null && s.machineNo !== '-';
+    const deviceLabel = hasMachineNo ? `No.${s.machineNo}` : s.deviceId;
+    return `
+      <div class="schedule-item" onclick="showDetail('${s.deviceId}')">
+        <div class="schedule-item-date ${isOverdue ? 'overdue' : ''}">${mmdd}</div>
+        <div class="schedule-item-body">
+          <div class="schedule-item-device">${deviceLabel}　${s.model || ''}</div>
+          <div class="schedule-item-type">${s.type}${s.parts ? '：' + s.parts : ''}　${s.site || ''}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
 // ── 機器詳細表示 ──
 async function showDetail(id) {
-  document.getElementById('screen-list').classList.remove('active');
+  // 画面切り替え
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-detail').classList.add('active');
-  document.getElementById('nav-back').style.display = 'block';
+  document.getElementById('nav-back').style.display  = 'block';
+  document.getElementById('nav-links').style.display = 'none';
   window.scrollTo(0, 0);
 
   // タブ初期化
@@ -463,6 +646,7 @@ async function showDetail(id) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.querySelector('.tab-btn').classList.add('active');
   document.getElementById('tab-history').classList.add('active');
+  document.getElementById('status-update-msg').textContent = '';
 
   // 機器情報取得
   let device;
@@ -475,29 +659,79 @@ async function showDetail(id) {
   } else {
     device = allDevices.find(d => d.id === id) || {};
   }
-
   currentDevice = device;
 
   const statusMap = { ok:['ok','✅ 正常'], warn:['warn','⚠️ 要注意'], alert:['alert','🚨 要対応'] };
-  const [cls, lbl] = statusMap[device.status] || ['ok','✅ 正常'];
+  const [cls] = statusMap[device.status] || ['ok'];
 
-  document.getElementById('d-id').textContent       = device.id || id;
-  document.getElementById('d-model').textContent    = device.model || '';
-  document.getElementById('d-site').textContent     = device.site || '';
-  document.getElementById('d-machineno').textContent= device.machineNo !== undefined ? device.machineNo : '-';
-  document.getElementById('d-lease').textContent    = device.leaseCompany || '-';
+  const hasMachineNo = device.machineNo !== undefined && device.machineNo !== null && device.machineNo !== '-';
+  document.getElementById('d-id').textContent      = hasMachineNo ? 'No.' + device.machineNo : (device.id || id);
+  document.getElementById('d-subid').textContent   = hasMachineNo ? 'ID: ' + (device.id || id) : '';
+  document.getElementById('d-model').textContent   = device.model || '';
+  document.getElementById('d-site').textContent    = device.site || '';
+  document.getElementById('d-deviceid').textContent= device.id || id;
+  document.getElementById('d-lease').textContent   = device.leaseCompany || '-';
   document.getElementById('d-leasestart').textContent = device.startDate || '-';
-  document.getElementById('d-replace').textContent  = device.replaceYear || '-';
-  document.getElementById('d-status2').textContent  = device.status === 'ok' ? '稼働中' : device.status === 'warn' ? '要注意' : '要対応';
+  document.getElementById('d-replace').textContent = device.replaceYear || '-';
+
+  updateStatusUI(device.status || 'ok');
+
+  loadHistory(id);
+}
+
+// ── 稼働状況UI更新 ──
+function updateStatusUI(status) {
+  const statusMap = { ok:['ok','✅ 正常'], warn:['warn','⚠️ 要注意'], alert:['alert','🚨 要対応'] };
+  const [cls, lbl] = statusMap[status] || ['ok','✅ 正常'];
+  const status2Map = { ok:'稼働中', warn:'要注意', alert:'要対応' };
 
   const badge = document.getElementById('d-status');
   badge.className = 'status-badge ' + cls;
   badge.textContent = lbl;
+  document.getElementById('d-status2').textContent = status2Map[status] || '稼働中';
 
-  // 履歴読み込み
-  loadHistory(id);
+  ['ok','warn','alert'].forEach(s => {
+    const btn = document.getElementById('btn-status-' + s);
+    btn.className = 'status-toggle-btn' + (s === status ? ' active-' + s : '');
+  });
 }
 
+// ── 稼働状況変更 ──
+async function updateStatus(newStatus) {
+  const id = currentDevice?.id;
+  if (!id) return;
+
+  currentDevice.status = newStatus;
+  updateStatusUI(newStatus);
+
+  // allDevicesも更新
+  const d = allDevices.find(d => d.id === id);
+  if (d) d.status = newStatus;
+
+  const msgEl = document.getElementById('status-update-msg');
+
+  if (!gasUrl) {
+    msgEl.className = 'status-update-msg ok';
+    msgEl.textContent = '（デモ）ステータスを変更しました';
+    return;
+  }
+
+  try {
+    const result = await apiPost({ action: 'updateStatus', deviceId: id, status: newStatus });
+    if (result.success) {
+      msgEl.className = 'status-update-msg ok';
+      msgEl.textContent = '✅ スプレッドシートを更新しました';
+    } else {
+      throw new Error(result.error || '更新失敗');
+    }
+  } catch(e) {
+    msgEl.className = 'status-update-msg ng';
+    msgEl.textContent = '❌ 更新エラー: ' + e.message;
+  }
+  setTimeout(() => { msgEl.textContent = ''; }, 3000);
+}
+
+// ── 機器履歴読み込み ──
 async function loadHistory(id) {
   const list = document.getElementById('history-list');
   list.innerHTML = '<div class="loading"><div class="spinner"></div>読み込み中...</div>';
@@ -528,6 +762,7 @@ async function loadHistory(id) {
       </div>
       <div class="history-content">${r.parts ? r.parts + '　' : ''}${r.content || ''}</div>
       <div class="history-staff">${r.vendor ? '業者: ' + r.vendor + '　' : ''}${r.staff ? '担当: ' + r.staff : ''}</div>
+      ${r.nextDate ? `<div class="history-next">📅 次回予定: ${r.nextDate}</div>` : ''}
     </div>
   `).join('');
 }
@@ -535,14 +770,14 @@ async function loadHistory(id) {
 // ── 記録保存 ──
 async function submitRecord(type) {
   const isInspect = type === 'inspect';
-  const btnId = isInspect ? 'btn-inspect-submit' : 'btn-repair-submit';
-  const resultId = isInspect ? 'inspect-result' : 'repair-result';
-  const btn = document.getElementById(btnId);
+  const btnId    = isInspect ? 'btn-inspect-submit' : 'btn-repair-submit';
+  const resultId = isInspect ? 'inspect-result'     : 'repair-result';
+  const btn      = document.getElementById(btnId);
   const resultEl = document.getElementById(resultId);
 
-  const date    = document.getElementById(isInspect ? 'i-date' : 'r-date').value;
+  const date    = document.getElementById(isInspect ? 'i-date'    : 'r-date').value;
   const content = document.getElementById(isInspect ? 'i-content' : 'r-content').value;
-  const staff   = document.getElementById(isInspect ? 'i-staff' : 'r-staff').value;
+  const staff   = document.getElementById(isInspect ? 'i-staff'   : 'r-staff').value;
 
   if (!date || !content) {
     resultEl.className = 'save-result ng';
@@ -555,7 +790,7 @@ async function submitRecord(type) {
 
   const payload = isInspect ? {
     action: 'addRecord',
-    recordType: '点検',
+    recordType:  '点検',
     deviceId:    currentDevice?.id || '',
     site:        currentDevice?.site || '',
     model:       currentDevice?.model || '',
@@ -563,7 +798,7 @@ async function submitRecord(type) {
     inspectType: document.getElementById('i-type').value,
     content,
     staff,
-    nextDate: document.getElementById('i-next').value,
+    nextDate:    document.getElementById('i-next').value,
   } : {
     action: 'addRecord',
     recordType:  document.getElementById('r-type').value,
@@ -576,6 +811,7 @@ async function submitRecord(type) {
     content,
     vendor:  document.getElementById('r-vendor').value,
     staff,
+    nextDate: document.getElementById('r-next').value,
   };
 
   try {
@@ -583,14 +819,12 @@ async function submitRecord(type) {
     if (result.success) {
       resultEl.className = 'save-result ok';
       resultEl.textContent = '✅ 保存しました！スプレッドシートに反映されています。';
-      // 履歴を再読み込み
       loadHistory(currentDevice?.id);
     } else {
       throw new Error(result.error || '保存に失敗しました');
     }
   } catch(e) {
     if (!gasUrl) {
-      // デモモード：保存成功を模擬
       resultEl.className = 'save-result ok';
       resultEl.textContent = '✅ （デモ）保存しました。GAS URL設定後は実際のスプレッドシートに保存されます。';
     } else {
@@ -603,13 +837,137 @@ async function submitRecord(type) {
   btn.textContent = isInspect ? '📋 点検記録を保存' : '🔧 修理・部品記録を保存';
 }
 
-// ── その他 ──
-function showList() {
-  document.getElementById('screen-detail').classList.remove('active');
-  document.getElementById('screen-list').classList.add('active');
-  document.getElementById('nav-back').style.display = 'none';
+// ── 全履歴一覧 ──
+async function loadAllHistory() {
+  if (allHistoryLoaded) { renderAllHistory(); return; }
+  const container = document.getElementById('all-history-list');
+  container.innerHTML = '<div class="loading"><div class="spinner"></div>読み込み中...</div>';
+
+  let records = DEMO_ALL_HISTORY;
+  if (gasUrl) {
+    try {
+      const data = await apiGet({ action: 'getAllHistory' });
+      if (data && data.records) records = data.records;
+    } catch(e) {
+      records = DEMO_ALL_HISTORY;
+    }
+  }
+
+  allHistoryData = records;
+  allHistoryLoaded = true;
+  renderAllHistory();
 }
 
+function sortAllHistory(mode) {
+  allHistorySort = mode;
+  document.getElementById('sort-btn-timeline').classList.toggle('active', mode === 'timeline');
+  document.getElementById('sort-btn-device').classList.toggle('active', mode === 'device');
+  renderAllHistory();
+}
+
+function renderAllHistory() {
+  const container = document.getElementById('all-history-list');
+  const typeClass = { '定期点検':'type-inspect', '部品交換':'type-consumable', 'アラーム対応':'type-trouble', '業者対応':'type-repair' };
+
+  function historyItemHtml(r, showDevice) {
+    const deviceLabel = (r.machineNo !== undefined && r.machineNo !== null && r.machineNo !== '-')
+      ? `No.${r.machineNo}　${r.deviceId}`
+      : r.deviceId;
+    return `
+      <div class="history-item" onclick="showDetail('${r.deviceId}')" style="cursor:pointer">
+        ${showDevice ? `<div class="history-item-device">${deviceLabel}</div>` : ''}
+        <div class="history-top">
+          <span class="history-type ${typeClass[r.type] || 'type-consumable'}">${r.type || ''}</span>
+          <span class="history-date">${r.date || ''}</span>
+        </div>
+        <div class="history-content">${r.parts ? r.parts + '　' : ''}${r.content || ''}</div>
+        <div class="history-staff">${r.vendor ? '業者: ' + r.vendor + '　' : ''}${r.staff ? '担当: ' + r.staff : ''}</div>
+        ${r.nextDate ? `<div class="history-next">📅 次回予定: ${r.nextDate}</div>` : ''}
+      </div>
+    `;
+  }
+
+  if (allHistoryData.length === 0) {
+    container.innerHTML = '<div class="empty-state">記録がありません</div>';
+    return;
+  }
+
+  if (allHistorySort === 'timeline') {
+    const sorted = [...allHistoryData].sort((a, b) => new Date(b.date) - new Date(a.date));
+    container.innerHTML = sorted.map(r => historyItemHtml(r, true)).join('');
+  } else {
+    // 機器別グループ
+    const groups = {};
+    allHistoryData.forEach(r => {
+      if (!groups[r.deviceId]) groups[r.deviceId] = { deviceId: r.deviceId, machineNo: r.machineNo, records: [] };
+      groups[r.deviceId].records.push(r);
+    });
+    const sortedGroups = Object.values(groups).sort((a, b) => {
+      const an = (a.machineNo === '-' || a.machineNo === undefined) ? 9999 : Number(a.machineNo);
+      const bn = (b.machineNo === '-' || b.machineNo === undefined) ? 9999 : Number(b.machineNo);
+      return an - bn;
+    });
+    sortedGroups.forEach(g => g.records.sort((a, b) => new Date(b.date) - new Date(a.date)));
+
+    container.innerHTML = sortedGroups.map(g => {
+      const hasMachineNo = g.machineNo !== undefined && g.machineNo !== null && g.machineNo !== '-';
+      const label = hasMachineNo ? `No.${g.machineNo}　${g.deviceId}` : g.deviceId;
+      return `
+        <div class="history-group">
+          <div class="history-group-label" onclick="showDetail('${g.deviceId}')">🔧 ${label}</div>
+          ${g.records.map(r => historyItemHtml(r, false)).join('')}
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+// ── 買替推奨年一覧 ──
+async function loadReplaceYears() {
+  const container = document.getElementById('replace-years-list');
+  if (container.dataset.loaded) return;
+
+  let devices = DEMO_DEVICES.filter(d => d.replaceYear);
+  if (gasUrl) {
+    try {
+      const data = await apiGet({ action: 'getReplaceYears' });
+      if (data && data.devices) devices = data.devices;
+    } catch(e) { /* demo fallback */ }
+  }
+
+  devices = [...devices].sort((a, b) => (a.replaceYear || 9999) - (b.replaceYear || 9999));
+
+  const currentYear = new Date().getFullYear();
+  if (devices.length === 0) {
+    container.innerHTML = '<div class="empty-state">データがありません</div>';
+    return;
+  }
+
+  container.innerHTML = devices.map(d => {
+    const year = Number(d.replaceYear);
+    let yearClass = year < currentYear ? 'past' : year <= currentYear + 1 ? 'soon' : 'future';
+    const hasMachineNo = d.machineNo !== undefined && d.machineNo !== null && d.machineNo !== '-';
+    const machineLabel = hasMachineNo ? 'No.' + d.machineNo : d.id;
+    return `
+      <div class="replace-item" onclick="showDetail('${d.id}')">
+        <div>
+          <div class="replace-year-label">買替推奨年</div>
+          <div class="replace-year-badge ${yearClass}">${year || '-'}</div>
+        </div>
+        <div class="replace-item-info">
+          <div class="replace-item-machine">${machineLabel}</div>
+          <div class="replace-item-id">${d.id}　${d.site || ''}</div>
+          <div class="replace-item-model">${d.model || ''}</div>
+          <div class="replace-item-lease">${d.leaseCompany || ''}　導入：${d.startDate || '-'}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  container.dataset.loaded = '1';
+}
+
+// ── その他 ──
 function switchTab(btn, tabId) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
