@@ -453,15 +453,19 @@ let allHistorySort = 'timeline';
 let allHistoryLoaded = false;
 
 // ── 初期化 ──
-window.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem('gasUrl');
-  if (saved && saved.trim() !== '') gasUrl = saved.trim();
+window.addEventListener('DOMContentLoaded', async () => {
+  // GAS_URLがコードに埋め込まれている場合は常にそれを優先する
+  // LocalStorageはGAS_URLが空の場合のみ使用
+  if (!GAS_URL) {
+    const saved = localStorage.getItem('gasUrl');
+    if (saved && saved.trim() !== '') gasUrl = saved.trim();
+  }
 
   const input = document.getElementById('gas-url-input');
   if (input) input.value = gasUrl || '';
 
   updateConfigStatus();
-  loadDeviceList();
+  await loadDeviceList();   // 機器一覧を先に完了させてからスケジュール取得
   loadSchedule();
 
   const today = new Date().toISOString().split('T')[0];
@@ -600,7 +604,9 @@ async function loadSchedule() {
   if (gasUrl) {
     try {
       const data = await apiGet({ action: 'getSchedule' });
-      if (data && data.schedules) schedules = data.schedules;
+      // GASが getSchedule に対応していればそのデータを使用
+      // 対応していない場合（error返却 or 未定義）はデモデータを継続使用
+      if (data && Array.isArray(data.schedules)) schedules = data.schedules;
     } catch(e) {
       schedules = DEMO_SCHEDULE;
     }
