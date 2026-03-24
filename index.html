@@ -522,7 +522,7 @@ async function apiPost(body) {
   if (!gasUrl) return { error: 'GAS URLが未設定です' };
   const res = await fetch(gasUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify(body)
   });
   return await res.json();
