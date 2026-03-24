@@ -28,7 +28,7 @@ const HEADER_ALIASES = {
   // 点検記録シート
   inspDate:     ['点検日', '実施日', '日付'],
   inspType:     ['点検種別', '種別', 'タイプ'],
-  inspContent:  ['点検内容', '内容', '所見'],
+  inspContent:  ['点検内容・所見', '点検内容', '内容', '所見'],
   staff:        ['担当者', '担当', 'スタッフ'],
   nextDate:     ['次回予定日', '次回点検予定日', '次回日', '予定日'],
   // 部品交換・修理記録シート
@@ -420,51 +420,47 @@ function getReplaceYears() {
 function addRecord(body) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
 
+  // シートのヘッダーを自動検出してフィールドをセットするヘルパー
+  function buildAndAppend(sheet, setFields) {
+    const data      = sheet.getDataRange().getValues();
+    const headerIdx = findHeaderRowIndex(data);
+    const colMap    = buildColMap(data[headerIdx]);
+    const newRow    = new Array(data[headerIdx].length).fill('');
+    const set = (fieldKey, val) => {
+      for (const alias of (HEADER_ALIASES[fieldKey] || [])) {
+        if (colMap[alias] !== undefined) { newRow[colMap[alias]] = val; return; }
+      }
+    };
+    setFields(set);
+    sheet.appendRow(newRow);
+  }
+
   if (body.recordType === '点検' || body.inspectType) {
-    const sheet  = ss.getSheetByName(INSPECT_SHEET);
-    const data   = sheet.getDataRange().getValues();
-    const colMap = buildColMap(data[0]);
-
-    // ヘッダーに合わせて追記行を組み立て
-    const newRow = new Array(data[0].length).fill('');
-    const set = (fieldKey, val) => {
-      for (const alias of (HEADER_ALIASES[fieldKey] || [])) {
-        if (colMap[alias] !== undefined) { newRow[colMap[alias]] = val; return; }
-      }
-    };
-    set('id',          body.deviceId   || '');
-    set('site',        body.site        || '');
-    set('model',       body.model       || '');
-    set('inspDate',    body.date        || '');
-    set('inspType',    body.inspectType || body.recordType || '定期点検');
-    set('inspContent', body.content     || '');
-    set('staff',       body.staff       || '');
-    set('nextDate',    body.nextDate    || '');
-    sheet.appendRow(newRow);
-
+    buildAndAppend(ss.getSheetByName(INSPECT_SHEET), set => {
+      set('id',          body.deviceId   || '');
+      set('site',        body.site        || '');
+      set('machineNo',   body.machineNo   || '');
+      set('model',       body.model       || '');
+      set('inspDate',    body.date        || '');
+      set('inspType',    body.inspectType || body.recordType || '定期点検');
+      set('inspContent', body.content     || '');
+      set('staff',       body.staff       || '');
+      set('nextDate',    body.nextDate    || '');
+    });
   } else {
-    const sheet  = ss.getSheetByName(REPAIR_SHEET);
-    const data   = sheet.getDataRange().getValues();
-    const colMap = buildColMap(data[0]);
-
-    const newRow = new Array(data[0].length).fill('');
-    const set = (fieldKey, val) => {
-      for (const alias of (HEADER_ALIASES[fieldKey] || [])) {
-        if (colMap[alias] !== undefined) { newRow[colMap[alias]] = val; return; }
-      }
-    };
-    set('id',              body.deviceId  || '');
-    set('site',            body.site       || '');
-    set('machineNo',       body.machineNo  || '');
-    set('model',           body.model      || '');
-    set('repairDate',      body.date       || '');
-    set('repairType',      body.recordType || '部品交換');
-    set('parts',           body.parts      || '');
-    set('repairContent',   body.content    || '');
-    set('vendor',          body.vendor     || '');
-    set('staff',           body.staff      || '');
-    set('repairNextDate',  body.nextDate   || '');
-    sheet.appendRow(newRow);
+    buildAndAppend(ss.getSheetByName(REPAIR_SHEET), set => {
+      set('id',             body.deviceId  || '');
+      set('site',           body.site       || '');
+      set('machineNo',      body.machineNo  || '');
+      set('model',          body.model      || '');
+      set('repairDate',     body.date       || '');
+      set('repairType',     body.recordType || '部品交換');
+      set('parts',          body.parts      || '');
+      set('repairContent',  body.content    || '');
+      set('vendor',         body.vendor     || '');
+      set('staff',          body.staff      || '');
+      set('repairNextDate', body.nextDate   || '');
+    });
   }
 
   return { success: true };
