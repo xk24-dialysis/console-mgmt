@@ -93,7 +93,6 @@ function fmtDate(val) {
 }
 
 // ── ヘッダー行からカラムマップを作成 ──
-// 例: { '機器ID': 0, '機械番号': 3, ... }
 function buildColMap(headers) {
   const map = {};
   headers.forEach((h, i) => {
@@ -102,6 +101,23 @@ function buildColMap(headers) {
     }
   });
   return map;
+}
+
+// ── 先頭10行のうちヘッダーらしき行を自動検出 ──
+// 既知のエイリアスに最も多くマッチする行をヘッダーと判定する
+function findHeaderRowIndex(data) {
+  const allAliases = new Set(Object.values(HEADER_ALIASES).flat());
+  let bestIdx = 0;
+  let bestScore = 0;
+  const limit = Math.min(10, data.length);
+  for (let i = 0; i < limit; i++) {
+    let score = 0;
+    for (const cell of data[i]) {
+      if (allAliases.has(String(cell).trim())) score++;
+    }
+    if (score > bestScore) { bestScore = score; bestIdx = i; }
+  }
+  return bestIdx;
 }
 
 // ── カラムマップからフィールド値を取得（候補名を順番に試す）──
@@ -141,17 +157,22 @@ function rowToDevice(row, colMap) {
 // ── 全機器台帳シートからデバイス行を取得するヘルパー ──
 function getAllDeviceRows() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const result = []; // { row, colMap, sheetName }
+  const result = [];
   for (const sheetName of DEVICE_SHEETS) {
     const sheet = ss.getSheetByName(sheetName);
     if (!sheet) continue;
     const data = sheet.getDataRange().getValues();
     if (data.length < 2) continue;
-    const colMap = buildColMap(data[0]);
-    const idCol  = findIdCol(colMap);
-    for (let i = 1; i < data.length; i++) {
+
+    // メモ行などを飛ばしてヘッダー行を自動検出
+    const headerIdx = findHeaderRowIndex(data);
+    const colMap    = buildColMap(data[headerIdx]);
+    const idCol     = findIdCol(colMap);
+
+    for (let i = headerIdx + 1; i < data.length; i++) {
       const id = String(data[i][idCol] || '').trim();
-      if (!id) continue;
+      // 空行・ヘッダーの繰り返し行はスキップ
+      if (!id || id === '機器ID' || id === 'ID') continue;
       result.push({ row: data[i], colMap, sheetName, rowIndex: i + 1 });
     }
   }
@@ -160,8 +181,11 @@ function getAllDeviceRows() {
 
 // ── 機器一覧 ──
 function getList() {
-  const devices = getAllDeviceRows().map(({ row, colMap }) => rowToDevice(row, colMap));
-  return { devices };
+  const rows = getAllDeviceRows();
+  const devices = rows.map(({ row, colMap }) => rowToDevice(row, colMap));
+  // デバッグ用：最初のシートのヘッダー一覧を返す（確認後に削除してOK）
+  const debugHeaders = rows.length > 0 ? Object.keys(rows[0].colMap) : [];
+  return { devices, _debug_headers: debugHeaders };
 }
 
 // ── 機器詳細 ──
