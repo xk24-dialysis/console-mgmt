@@ -351,9 +351,9 @@ function buildDevMap() {
 
 // ── 全機器履歴 ──
 function getAllHistory() {
+  const ss           = SpreadsheetApp.getActiveSpreadsheet();
   const machineNoMap = buildMachineNoMap();
-
-  const records = [];
+  const records      = [];
 
   const iData  = ss.getSheetByName(INSPECT_SHEET).getDataRange().getValues();
   const iMap   = buildColMap(iData[0]);

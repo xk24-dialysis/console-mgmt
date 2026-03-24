@@ -573,7 +573,7 @@ function renderList(filter) {
   const statusLabel = { ok:'正常稼働', warn:'要注意', alert:'要対応' };
   grid.innerHTML = filtered.map(d => {
     const hasMachineNo = d.machineNo !== undefined && d.machineNo !== null && d.machineNo !== '-';
-    const bigText = hasMachineNo ? 'No.' + d.machineNo : d.id;
+    const bigText = hasMachineNo ? String(d.machineNo) : d.id;
     const subText = hasMachineNo ? d.id : '';
     return `
       <div class="console-card status-${d.status || 'ok'}" onclick="showDetail('${d.id}')">
@@ -625,7 +625,7 @@ async function loadSchedule() {
     const isOverdue = d < today;
     const mmdd = s.nextDate.slice(5).replace('/', '/');
     const hasMachineNo = s.machineNo !== undefined && s.machineNo !== null && s.machineNo !== '-';
-    const deviceLabel = hasMachineNo ? `No.${s.machineNo}` : s.deviceId;
+    const deviceLabel = hasMachineNo ? String(s.machineNo) : s.deviceId;
     return `
       <div class="schedule-item" onclick="showDetail('${s.deviceId}')">
         <div class="schedule-item-date ${isOverdue ? 'overdue' : ''}">${mmdd}</div>
@@ -671,7 +671,7 @@ async function showDetail(id) {
   const [cls] = statusMap[device.status] || ['ok'];
 
   const hasMachineNo = device.machineNo !== undefined && device.machineNo !== null && device.machineNo !== '-';
-  document.getElementById('d-id').textContent      = hasMachineNo ? 'No.' + device.machineNo : (device.id || id);
+  document.getElementById('d-id').textContent      = hasMachineNo ? String(device.machineNo) : (device.id || id);
   document.getElementById('d-subid').textContent   = hasMachineNo ? 'ID: ' + (device.id || id) : '';
   document.getElementById('d-model').textContent   = device.model || '';
   document.getElementById('d-site').textContent    = device.site || '';
@@ -877,7 +877,7 @@ function renderAllHistory() {
 
   function historyItemHtml(r, showDevice) {
     const deviceLabel = (r.machineNo !== undefined && r.machineNo !== null && r.machineNo !== '-')
-      ? `No.${r.machineNo}　${r.deviceId}`
+      ? `${r.machineNo}　${r.deviceId}`
       : r.deviceId;
     return `
       <div class="history-item" onclick="showDetail('${r.deviceId}')" style="cursor:pointer">
@@ -917,7 +917,7 @@ function renderAllHistory() {
 
     container.innerHTML = sortedGroups.map(g => {
       const hasMachineNo = g.machineNo !== undefined && g.machineNo !== null && g.machineNo !== '-';
-      const label = hasMachineNo ? `No.${g.machineNo}　${g.deviceId}` : g.deviceId;
+      const label = hasMachineNo ? `${g.machineNo}　${g.deviceId}` : g.deviceId;
       return `
         <div class="history-group">
           <div class="history-group-label" onclick="showDetail('${g.deviceId}')">🔧 ${label}</div>
@@ -953,7 +953,7 @@ async function loadReplaceYears() {
     const year = Number(d.replaceYear);
     let yearClass = year < currentYear ? 'past' : year <= currentYear + 1 ? 'soon' : 'future';
     const hasMachineNo = d.machineNo !== undefined && d.machineNo !== null && d.machineNo !== '-';
-    const machineLabel = hasMachineNo ? 'No.' + d.machineNo : d.id;
+    const machineLabel = hasMachineNo ? String(d.machineNo) : d.id;
     return `
       <div class="replace-item" onclick="showDetail('${d.id}')">
         <div>
