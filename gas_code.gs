@@ -3,9 +3,11 @@
 // スプレッドシートから開いたGASはIDなしで自動認識します。
 // ════════════════════════════════════════════════════════════
 
-// ★ シート名（実際のシート名タブに合わせてください）
+// ★ 機器台帳シート（複数拠点を配列で指定）
+const DEVICE_SHEETS = ['機器台帳_川奈', '機器台帳_伊豆高原'];
+// ★ 後方互換用（updateStatus等で使用）
 const LEASE_SHEET   = '機器台帳_川奈';
-const INSPECT_SHEET = '点検記録';
+const INSPECT_SHEET = '定期点検記録';
 const REPAIR_SHEET  = '部品交換・修理記録';
 
 // ════════════════════════════════════════════════════════════
@@ -136,34 +138,38 @@ function rowToDevice(row, colMap) {
   };
 }
 
+// ── 全機器台帳シートからデバイス行を取得するヘルパー ──
+function getAllDeviceRows() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const result = []; // { row, colMap, sheetName }
+  for (const sheetName of DEVICE_SHEETS) {
+    const sheet = ss.getSheetByName(sheetName);
+    if (!sheet) continue;
+    const data = sheet.getDataRange().getValues();
+    if (data.length < 2) continue;
+    const colMap = buildColMap(data[0]);
+    const idCol  = findIdCol(colMap);
+    for (let i = 1; i < data.length; i++) {
+      const id = String(data[i][idCol] || '').trim();
+      if (!id) continue;
+      result.push({ row: data[i], colMap, sheetName, rowIndex: i + 1 });
+    }
+  }
+  return result;
+}
+
 // ── 機器一覧 ──
 function getList() {
-  const ss    = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(LEASE_SHEET);
-  const data  = sheet.getDataRange().getValues();
-  if (data.length < 2) return { devices: [] };
-
-  const colMap = buildColMap(data[0]);
-  const devices = [];
-  for (let i = 1; i < data.length; i++) {
-    const id = String(data[i][colMap[HEADER_ALIASES.id[0]] !== undefined ? colMap[HEADER_ALIASES.id[0]] : 0] || '');
-    if (!id) continue;
-    devices.push(rowToDevice(data[i], colMap));
-  }
+  const devices = getAllDeviceRows().map(({ row, colMap }) => rowToDevice(row, colMap));
   return { devices };
 }
 
 // ── 機器詳細 ──
 function getDevice(id) {
-  const ss    = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(LEASE_SHEET);
-  const data  = sheet.getDataRange().getValues();
-  if (data.length < 2) return {};
-
-  const colMap = buildColMap(data[0]);
-  const idCol  = findIdCol(colMap);
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][idCol]) === String(id)) return rowToDevice(data[i], colMap);
+  for (const { row, colMap } of getAllDeviceRows()) {
+    if (String(getField(row, colMap, 'id') || row[0]) === String(id)) {
+      return rowToDevice(row, colMap);
+    }
   }
   return {};
 }
@@ -230,20 +236,8 @@ function getSchedule() {
   const thisYear  = now.getFullYear();
   const thisMonth = now.getMonth();
 
-  // 機器情報マップ
-  const leaseData = ss.getSheetByName(LEASE_SHEET).getDataRange().getValues();
-  const leaseMap  = buildColMap(leaseData[0]);
-  const leaseIdCol = findIdCol(leaseMap);
-  const devMap = {};
-  for (let i = 1; i < leaseData.length; i++) {
-    const devId = String(leaseData[i][leaseIdCol] || '');
-    if (!devId) continue;
-    devMap[devId] = {
-      machineNo: getField(leaseData[i], leaseMap, 'machineNo') || '-',
-      model:     String(getField(leaseData[i], leaseMap, 'model') || ''),
-      site:      String(getField(leaseData[i], leaseMap, 'site')  || ''),
-    };
-  }
+  // 機器情報マップ（全機器台帳シートから構築）
+  const devMap = buildDevMap();
 
   const schedules = [];
 
@@ -310,19 +304,33 @@ function getSchedule() {
   return { schedules };
 }
 
+// ── 機械番号マップを全機器台帳から構築 ──
+function buildMachineNoMap() {
+  const map = {};
+  for (const { row, colMap } of getAllDeviceRows()) {
+    const id = String(getField(row, colMap, 'id') || row[0] || '');
+    if (id) map[id] = getField(row, colMap, 'machineNo') || '-';
+  }
+  return map;
+}
+
+// ── devMapを全機器台帳から構築（getSchedule用）──
+function buildDevMap() {
+  const map = {};
+  for (const { row, colMap } of getAllDeviceRows()) {
+    const id = String(getField(row, colMap, 'id') || row[0] || '');
+    if (id) map[id] = {
+      machineNo: getField(row, colMap, 'machineNo') || '-',
+      model:     String(getField(row, colMap, 'model') || ''),
+      site:      String(getField(row, colMap, 'site')  || ''),
+    };
+  }
+  return map;
+}
+
 // ── 全機器履歴 ──
 function getAllHistory() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-
-  // 機械番号マップ
-  const leaseData  = ss.getSheetByName(LEASE_SHEET).getDataRange().getValues();
-  const leaseMap   = buildColMap(leaseData[0]);
-  const leaseIdCol = findIdCol(leaseMap);
-  const machineNoMap = {};
-  for (let i = 1; i < leaseData.length; i++) {
-    const devId = String(leaseData[i][leaseIdCol] || '');
-    if (devId) machineNoMap[devId] = getField(leaseData[i], leaseMap, 'machineNo') || '-';
-  }
+  const machineNoMap = buildMachineNoMap();
 
   const records = [];
 
@@ -368,25 +376,18 @@ function getAllHistory() {
 
 // ── 買替推奨年一覧 ──
 function getReplaceYears() {
-  const ss     = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet  = ss.getSheetByName(LEASE_SHEET);
-  const data   = sheet.getDataRange().getValues();
-  if (data.length < 2) return { devices: [] };
-
-  const colMap = buildColMap(data[0]);
-  const idCol  = findIdCol(colMap);
   const devices = [];
-  for (let i = 1; i < data.length; i++) {
-    const id          = String(data[i][idCol] || '');
-    const replaceYear = getField(data[i], colMap, 'replaceYear');
+  for (const { row, colMap } of getAllDeviceRows()) {
+    const id          = String(getField(row, colMap, 'id') || row[0] || '');
+    const replaceYear = getField(row, colMap, 'replaceYear');
     if (!id || !replaceYear) continue;
     devices.push({
       id:           id,
-      site:         String(getField(data[i], colMap, 'site')         || ''),
-      machineNo:    getField(data[i], colMap, 'machineNo')            || '-',
-      model:        String(getField(data[i], colMap, 'model')        || ''),
-      leaseCompany: String(getField(data[i], colMap, 'leaseCompany') || ''),
-      startDate:    fmtDate(getField(data[i], colMap, 'startDate')),
+      site:         String(getField(row, colMap, 'site')         || ''),
+      machineNo:    getField(row, colMap, 'machineNo')            || '-',
+      model:        String(getField(row, colMap, 'model')        || ''),
+      leaseCompany: String(getField(row, colMap, 'leaseCompany') || ''),
+      startDate:    fmtDate(getField(row, colMap, 'startDate')),
       replaceYear:  Number(replaceYear),
     });
   }
@@ -448,28 +449,30 @@ function addRecord(body) {
   return { success: true };
 }
 
-// ── 稼働状況更新（稼働状況列を更新）──
+// ── 稼働状況更新（全機器台帳シートを検索して更新）──
 function updateStatus(body) {
-  const ss     = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet  = ss.getSheetByName(LEASE_SHEET);
-  const data   = sheet.getDataRange().getValues();
-  const colMap = buildColMap(data[0]);
-  const idCol  = findIdCol(colMap);
-
-  // 稼働状況列のインデックスを取得
-  let statusCol = -1;
-  for (const alias of HEADER_ALIASES.status) {
-    if (colMap[alias] !== undefined) { statusCol = colMap[alias]; break; }
-  }
-  if (statusCol === -1) return { error: '稼働状況列が見つかりません' };
-
+  const ss       = SpreadsheetApp.getActiveSpreadsheet();
   const labelMap = { ok: '稼働中', warn: '要注意', alert: '要対応' };
   const newLabel = labelMap[body.status] || '稼働中';
 
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][idCol]) === String(body.deviceId)) {
-      sheet.getRange(i + 1, statusCol + 1).setValue(newLabel);
-      return { success: true };
+  for (const sheetName of DEVICE_SHEETS) {
+    const sheet  = ss.getSheetByName(sheetName);
+    if (!sheet) continue;
+    const data   = sheet.getDataRange().getValues();
+    const colMap = buildColMap(data[0]);
+    const idCol  = findIdCol(colMap);
+
+    let statusCol = -1;
+    for (const alias of HEADER_ALIASES.status) {
+      if (colMap[alias] !== undefined) { statusCol = colMap[alias]; break; }
+    }
+    if (statusCol === -1) continue;
+
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][idCol]) === String(body.deviceId)) {
+        sheet.getRange(i + 1, statusCol + 1).setValue(newLabel);
+        return { success: true };
+      }
     }
   }
   return { error: '機器が見つかりません: ' + body.deviceId };
