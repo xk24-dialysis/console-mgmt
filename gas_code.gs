@@ -181,11 +181,8 @@ function getAllDeviceRows() {
 
 // ── 機器一覧 ──
 function getList() {
-  const rows = getAllDeviceRows();
-  const devices = rows.map(({ row, colMap }) => rowToDevice(row, colMap));
-  // デバッグ用：最初のシートのヘッダー一覧を返す（確認後に削除してOK）
-  const debugHeaders = rows.length > 0 ? Object.keys(rows[0].colMap) : [];
-  return { devices, _debug_headers: debugHeaders };
+  const devices = getAllDeviceRows().map(({ row, colMap }) => rowToDevice(row, colMap));
+  return { devices };
 }
 
 // ── 機器詳細 ──
