@@ -731,9 +731,10 @@ async function updateStatus(newStatus) {
   currentDevice.status = newStatus;
   updateStatusUI(newStatus);
 
-  // allDevicesも更新
+  // allDevicesも更新して一覧を即時再描画
   const d = allDevices.find(d => d.id === id);
   if (d) d.status = newStatus;
+  renderList(currentFilter);
 
   const msgEl = document.getElementById('status-update-msg');
 
