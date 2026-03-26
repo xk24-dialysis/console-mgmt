@@ -34,8 +34,8 @@ const HEADER_ALIASES = {
   // 部品交換・修理記録シート
   repairDate:   ['対応日', '実施日', '日付'],
   repairType:   ['記録種別', '種別', 'タイプ'],
-  parts:        ['交換部品', '部品', '対応内容', '交換部品・対応内容'],
-  repairContent:['理由・詳細', '詳細', '内容', '理由'],
+  parts:        ['交換部品', '部品', '対応内容', '交換部品・対応内容', '交換・対応部品'],
+  repairContent:['理由・詳細', '詳細', '内容', '理由', '実施内容・理由', '実施内容'],
   vendor:       ['対応業者', '業者', 'ベンダー'],
   repairNextDate:['次回予定日', '次回日', '予定日'],
 };
@@ -212,9 +212,10 @@ function getHistory(id) {
   const iSheet = ss.getSheetByName(INSPECT_SHEET);
   const iData  = iSheet.getDataRange().getValues();
   if (iData.length > 1) {
-    const iMap   = buildColMap(iData[0]);
+    const iHIdx  = findHeaderRowIndex(iData);
+    const iMap   = buildColMap(iData[iHIdx]);
     const iIdCol = findIdCol(iMap);
-    for (let i = 1; i < iData.length; i++) {
+    for (let i = iHIdx + 1; i < iData.length; i++) {
       if (String(iData[i][iIdCol]) !== String(id)) continue;
       records.push({
         type:     String(getField(iData[i], iMap, 'inspType')    || '定期点検'),
@@ -230,9 +231,10 @@ function getHistory(id) {
   const rSheet = ss.getSheetByName(REPAIR_SHEET);
   const rData  = rSheet.getDataRange().getValues();
   if (rData.length > 1) {
-    const rMap   = buildColMap(rData[0]);
+    const rHIdx  = findHeaderRowIndex(rData);
+    const rMap   = buildColMap(rData[rHIdx]);
     const rIdCol = findIdCol(rMap);
-    for (let i = 1; i < rData.length; i++) {
+    for (let i = rHIdx + 1; i < rData.length; i++) {
       if (String(rData[i][rIdCol]) !== String(id)) continue;
       records.push({
         type:     String(getField(rData[i], rMap, 'repairType')    || '部品交換'),
@@ -264,15 +266,16 @@ function getSchedule() {
 
   // 点検記録の次回予定
   const iData  = ss.getSheetByName(INSPECT_SHEET).getDataRange().getValues();
-  const iMap   = buildColMap(iData[0]);
+  const iHIdx  = findHeaderRowIndex(iData);
+  const iMap   = buildColMap(iData[iHIdx]);
   const iIdCol = findIdCol(iMap);
   const lastInspect = {};
-  for (let i = 1; i < iData.length; i++) {
+  for (let i = iHIdx + 1; i < iData.length; i++) {
     const devId = String(iData[i][iIdCol] || '');
     const d = getField(iData[i], iMap, 'inspDate') ? new Date(getField(iData[i], iMap, 'inspDate')) : null;
     if (d && (!lastInspect[devId] || d > lastInspect[devId])) lastInspect[devId] = d;
   }
-  for (let i = 1; i < iData.length; i++) {
+  for (let i = iHIdx + 1; i < iData.length; i++) {
     const nextRaw = getField(iData[i], iMap, 'nextDate');
     if (!nextRaw) continue;
     const next = new Date(nextRaw);
@@ -293,15 +296,16 @@ function getSchedule() {
 
   // 部品交換・修理記録の次回予定
   const rData  = ss.getSheetByName(REPAIR_SHEET).getDataRange().getValues();
-  const rMap   = buildColMap(rData[0]);
+  const rHIdx  = findHeaderRowIndex(rData);
+  const rMap   = buildColMap(rData[rHIdx]);
   const rIdCol = findIdCol(rMap);
   const lastRepair = {};
-  for (let i = 1; i < rData.length; i++) {
+  for (let i = rHIdx + 1; i < rData.length; i++) {
     const devId = String(rData[i][rIdCol] || '');
     const d = getField(rData[i], rMap, 'repairDate') ? new Date(getField(rData[i], rMap, 'repairDate')) : null;
     if (d && (!lastRepair[devId] || d > lastRepair[devId])) lastRepair[devId] = d;
   }
-  for (let i = 1; i < rData.length; i++) {
+  for (let i = rHIdx + 1; i < rData.length; i++) {
     const nextRaw = getField(rData[i], rMap, 'repairNextDate');
     if (!nextRaw) continue;
     const next = new Date(nextRaw);
@@ -356,9 +360,10 @@ function getAllHistory() {
   const records      = [];
 
   const iData  = ss.getSheetByName(INSPECT_SHEET).getDataRange().getValues();
-  const iMap   = buildColMap(iData[0]);
+  const iHIdx  = findHeaderRowIndex(iData);
+  const iMap   = buildColMap(iData[iHIdx]);
   const iIdCol = findIdCol(iMap);
-  for (let i = 1; i < iData.length; i++) {
+  for (let i = iHIdx + 1; i < iData.length; i++) {
     const devId = String(iData[i][iIdCol] || '');
     if (!devId || !getField(iData[i], iMap, 'inspDate')) continue;
     records.push({
@@ -373,9 +378,10 @@ function getAllHistory() {
   }
 
   const rData  = ss.getSheetByName(REPAIR_SHEET).getDataRange().getValues();
-  const rMap   = buildColMap(rData[0]);
+  const rHIdx  = findHeaderRowIndex(rData);
+  const rMap   = buildColMap(rData[rHIdx]);
   const rIdCol = findIdCol(rMap);
-  for (let i = 1; i < rData.length; i++) {
+  for (let i = rHIdx + 1; i < rData.length; i++) {
     const devId = String(rData[i][rIdCol] || '');
     if (!devId || !getField(rData[i], rMap, 'repairDate')) continue;
     records.push({
@@ -473,11 +479,12 @@ function updateStatus(body) {
   const newLabel = labelMap[body.status] || '稼働中';
 
   for (const sheetName of DEVICE_SHEETS) {
-    const sheet  = ss.getSheetByName(sheetName);
+    const sheet     = ss.getSheetByName(sheetName);
     if (!sheet) continue;
-    const data   = sheet.getDataRange().getValues();
-    const colMap = buildColMap(data[0]);
-    const idCol  = findIdCol(colMap);
+    const data      = sheet.getDataRange().getValues();
+    const headerIdx = findHeaderRowIndex(data);
+    const colMap    = buildColMap(data[headerIdx]);
+    const idCol     = findIdCol(colMap);
 
     let statusCol = -1;
     for (const alias of HEADER_ALIASES.status) {
@@ -485,7 +492,7 @@ function updateStatus(body) {
     }
     if (statusCol === -1) continue;
 
-    for (let i = 1; i < data.length; i++) {
+    for (let i = headerIdx + 1; i < data.length; i++) {
       if (String(data[i][idCol]) === String(body.deviceId)) {
         sheet.getRange(i + 1, statusCol + 1).setValue(newLabel);
         return { success: true };

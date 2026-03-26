@@ -426,6 +426,7 @@ const DEMO_ALL_HISTORY = [
   <div class="hist-filter-bar">
     <button class="sort-btn active" id="sort-btn-timeline" onclick="sortAllHistory('timeline')">🕐 時系列</button>
     <button class="sort-btn"        id="sort-btn-device"   onclick="sortAllHistory('device')">🔧 機器別</button>
+    <button class="sort-btn"        id="sort-btn-order"    onclick="toggleHistOrder()">↓ 新しい順</button>
     <select id="hist-machine-filter" class="hist-machine-select" onchange="filterHistMachine(this.value)">
       <option value="all">全機器</option>
     </select>
@@ -462,6 +463,7 @@ let currentDevice = null;
 let gasUrl = GAS_URL;
 let allHistoryData = [];
 let allHistorySort = 'timeline';
+let allHistoryOrder = 'desc';
 let allHistoryTypeFilter = 'all';
 let allHistoryMachineFilter = 'all';
 let allHistoryLoaded = false;
@@ -945,6 +947,14 @@ function filterHistMachine(val) {
   renderAllHistory();
 }
 
+function toggleHistOrder() {
+  allHistoryOrder = allHistoryOrder === 'desc' ? 'asc' : 'desc';
+  const btn = document.getElementById('sort-btn-order');
+  btn.textContent = allHistoryOrder === 'desc' ? '↓ 新しい順' : '↑ 古い順';
+  btn.classList.toggle('active', allHistoryOrder === 'asc');
+  renderAllHistory();
+}
+
 function renderAllHistory() {
   const container = document.getElementById('all-history-list');
   const typeClass = { '定期点検':'type-inspect', '部品交換':'type-consumable', 'アラーム対応':'type-trouble', '業者対応':'type-repair' };
@@ -981,8 +991,12 @@ function renderAllHistory() {
     return;
   }
 
+  const dateCmp = (a, b) => allHistoryOrder === 'desc'
+    ? new Date(b.date) - new Date(a.date)
+    : new Date(a.date) - new Date(b.date);
+
   if (allHistorySort === 'timeline') {
-    const sorted = [...filtered].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const sorted = [...filtered].sort(dateCmp);
     container.innerHTML = sorted.map(r => historyItemHtml(r, true)).join('');
   } else {
     // 機器別グループ
@@ -996,7 +1010,7 @@ function renderAllHistory() {
       const bn = isNaN(Number(b.machineNo)) ? 9999 : Number(b.machineNo);
       return an - bn;
     });
-    sortedGroups.forEach(g => g.records.sort((a, b) => new Date(b.date) - new Date(a.date)));
+    sortedGroups.forEach(g => g.records.sort(dateCmp));
 
     container.innerHTML = sortedGroups.map(g => {
       const hasMachineNo = g.machineNo !== undefined && g.machineNo !== null && g.machineNo !== '-';
