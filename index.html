@@ -983,7 +983,7 @@ function renderAllHistory() {
         </div>
         <div class="history-fields">
           ${r.parts   ? `<div class="history-field"><span class="history-field-label">交換部品</span><span>${r.parts}</span></div>` : ''}
-          ${r.content ? `<div class="history-field"><span class="history-field-label">${isInsp ? '点検内容' : '実施内容'}</span><span>${r.content}</span></div>` : ''}
+          ${r.content ? `<div class="history-field"><span class="history-field-label">${isInsp ? '点検内容' : '実施理由'}</span><span>${r.content}</span></div>` : ''}
         </div>
         ${staffLine ? `<div class="history-staff">${staffLine}</div>` : ''}
         ${r.nextDate ? `<div class="history-next">📅 次回予定: ${r.nextDate}</div>` : ''}
