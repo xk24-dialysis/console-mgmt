@@ -528,6 +528,31 @@ async function apiPost(body) {
   return await res.json();
 }
 
+// ── キャッシュ付きGET（5分間localStorageに保存）──
+const CACHE_TTL = 5 * 60 * 1000;
+async function cachedGet(params) {
+  const key = 'gc_' + JSON.stringify(params);
+  try {
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      const { ts, data } = JSON.parse(saved);
+      if (Date.now() - ts < CACHE_TTL) return data;
+    }
+  } catch(e) {}
+  const data = await apiGet(params);
+  if (data) {
+    try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch(e) {}
+  }
+  return data;
+}
+function clearCache(actionOrPrefix) {
+  const prefix = 'gc_{"action":"' + actionOrPrefix;
+  Object.keys(localStorage).forEach(k => { if (k.startsWith(prefix)) localStorage.removeItem(k); });
+}
+function clearAllCache() {
+  Object.keys(localStorage).forEach(k => { if (k.startsWith('gc_')) localStorage.removeItem(k); });
+}
+
 // ── 機器一覧読み込み ──
 async function loadDeviceList() {
   const grid = document.getElementById('console-grid');
@@ -536,7 +561,7 @@ async function loadDeviceList() {
   let devices = DEMO_DEVICES;
   if (gasUrl && gasUrl.trim() !== '') {
     try {
-      const data = await apiGet({ action: 'getList' });
+      const data = await cachedGet({ action: 'getList' });
       if (data && data.devices && data.devices.length > 0) devices = data.devices;
     } catch(e) {
       console.warn('GAS接続失敗、デモデータを使用:', e);
@@ -603,7 +628,7 @@ async function loadSchedule() {
   let schedules = DEMO_SCHEDULE;
   if (gasUrl) {
     try {
-      const data = await apiGet({ action: 'getSchedule' });
+      const data = await cachedGet({ action: 'getSchedule' });
       // GASが getSchedule に対応していればそのデータを使用
       // 対応していない場合（error返却 or 未定義）はデモデータを継続使用
       if (data && Array.isArray(data.schedules)) schedules = data.schedules;
@@ -654,16 +679,12 @@ async function showDetail(id) {
   document.getElementById('tab-history').classList.add('active');
   document.getElementById('status-update-msg').textContent = '';
 
-  // 機器情報取得
-  let device;
-  if (gasUrl) {
+  // 機器情報取得（一覧キャッシュから優先使用、なければAPI）
+  let device = allDevices.find(d => d.id === id) || {};
+  if (gasUrl && !device.id) {
     try {
-      device = await apiGet({ action: 'getDevice', id });
-    } catch(e) {
-      device = allDevices.find(d => d.id === id) || {};
-    }
-  } else {
-    device = allDevices.find(d => d.id === id) || {};
+      device = await cachedGet({ action: 'getDevice', id }) || {};
+    } catch(e) {}
   }
   currentDevice = device;
 
@@ -727,6 +748,7 @@ async function updateStatus(newStatus) {
     if (result.success) {
       msgEl.className = 'status-update-msg ok';
       msgEl.textContent = '✅ スプレッドシートを更新しました';
+      clearCache('getList');
     } else {
       throw new Error(result.error || '更新失敗');
     }
@@ -745,7 +767,7 @@ async function loadHistory(id) {
   let records;
   if (gasUrl) {
     try {
-      const data = await apiGet({ action: 'getHistory', id });
+      const data = await cachedGet({ action: 'getHistory', id });
       records = data.records || [];
     } catch(e) {
       records = DEMO_HISTORY[id] || [];
@@ -825,6 +847,10 @@ async function submitRecord(type) {
     if (result.success) {
       resultEl.className = 'save-result ok';
       resultEl.textContent = '✅ 保存しました！スプレッドシートに反映されています。';
+      clearCache('getHistory');
+      clearCache('getAllHistory');
+      clearCache('getSchedule');
+      allHistoryLoaded = false;
       loadHistory(currentDevice?.id);
     } else {
       throw new Error(result.error || '保存に失敗しました');
@@ -852,7 +878,7 @@ async function loadAllHistory() {
   let records = DEMO_ALL_HISTORY;
   if (gasUrl) {
     try {
-      const data = await apiGet({ action: 'getAllHistory' });
+      const data = await cachedGet({ action: 'getAllHistory' });
       if (data && data.records) records = data.records;
     } catch(e) {
       records = DEMO_ALL_HISTORY;
@@ -936,7 +962,7 @@ async function loadReplaceYears() {
   let devices = DEMO_DEVICES.filter(d => d.replaceYear);
   if (gasUrl) {
     try {
-      const data = await apiGet({ action: 'getReplaceYears' });
+      const data = await cachedGet({ action: 'getReplaceYears' });
       if (data && data.devices) devices = data.devices;
     } catch(e) { /* demo fallback */ }
   }
