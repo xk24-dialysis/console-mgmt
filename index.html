@@ -192,6 +192,8 @@ body { font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif; background: var
 .all-history-list { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
 .history-item-device { font-size: 11px; font-weight: 700; color: var(--blue); margin-bottom: 4px; }
 .history-group-label { font-size: 13px; font-weight: 700; color: var(--blue); padding: 6px 0; border-bottom: 1px solid var(--border); margin-bottom: 8px; cursor: pointer; }
+.hist-filter-bar { padding: 8px 16px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--border); background: var(--surface); }
+.hist-machine-select { background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 20px; padding: 5px 12px; font-size: 12px; font-family: inherit; cursor: pointer; max-width: 160px; }
 .history-group-label:hover { color: var(--text); }
 .history-group { margin-bottom: 20px; }
 
@@ -414,9 +416,19 @@ const DEMO_ALL_HISTORY = [
     <div class="page-title">履歴一覧</div>
     <div class="page-subtitle">全機器の点検・修理記録</div>
   </div>
+  <!-- タイプフィルター -->
   <div class="sort-bar">
+    <button class="sort-btn active" id="hist-type-all"    onclick="filterHistType('all')">全て</button>
+    <button class="sort-btn"        id="hist-type-insp"   onclick="filterHistType('insp')">点検</button>
+    <button class="sort-btn"        id="hist-type-repair" onclick="filterHistType('repair')">修理・部品</button>
+  </div>
+  <!-- ソート＋機器フィルター -->
+  <div class="hist-filter-bar">
     <button class="sort-btn active" id="sort-btn-timeline" onclick="sortAllHistory('timeline')">🕐 時系列</button>
-    <button class="sort-btn" id="sort-btn-device" onclick="sortAllHistory('device')">🔧 機器別</button>
+    <button class="sort-btn"        id="sort-btn-device"   onclick="sortAllHistory('device')">🔧 機器別</button>
+    <select id="hist-machine-filter" class="hist-machine-select" onchange="filterHistMachine(this.value)">
+      <option value="all">全機器</option>
+    </select>
   </div>
   <div id="all-history-list" class="all-history-list">
     <div class="loading"><div class="spinner"></div>読み込み中...</div>
@@ -450,6 +462,8 @@ let currentDevice = null;
 let gasUrl = GAS_URL;
 let allHistoryData = [];
 let allHistorySort = 'timeline';
+let allHistoryTypeFilter = 'all';
+let allHistoryMachineFilter = 'all';
 let allHistoryLoaded = false;
 
 // ── 初期化 ──
@@ -889,6 +903,25 @@ async function loadAllHistory() {
 
   allHistoryData = records;
   allHistoryLoaded = true;
+
+  // 機器フィルターのセレクトを生成
+  const sel = document.getElementById('hist-machine-filter');
+  const seen = new Set();
+  const opts = [{ val: 'all', label: '全機器' }];
+  [...records].sort((a, b) => {
+    const an = isNaN(Number(a.machineNo)) ? 9999 : Number(a.machineNo);
+    const bn = isNaN(Number(b.machineNo)) ? 9999 : Number(b.machineNo);
+    return an - bn || a.deviceId.localeCompare(b.deviceId);
+  }).forEach(r => {
+    if (!seen.has(r.deviceId)) {
+      seen.add(r.deviceId);
+      const label = (r.machineNo && r.machineNo !== '-') ? `${r.machineNo}（${r.deviceId}）` : r.deviceId;
+      opts.push({ val: r.deviceId, label });
+    }
+  });
+  sel.innerHTML = opts.map(o => `<option value="${o.val}">${o.label}</option>`).join('');
+  sel.value = allHistoryMachineFilter;
+
   renderAllHistory();
 }
 
@@ -899,9 +932,31 @@ function sortAllHistory(mode) {
   renderAllHistory();
 }
 
+function filterHistType(type) {
+  allHistoryTypeFilter = type;
+  ['all','insp','repair'].forEach(t => {
+    document.getElementById('hist-type-' + t).classList.toggle('active', t === type);
+  });
+  renderAllHistory();
+}
+
+function filterHistMachine(val) {
+  allHistoryMachineFilter = val;
+  renderAllHistory();
+}
+
 function renderAllHistory() {
   const container = document.getElementById('all-history-list');
   const typeClass = { '定期点検':'type-inspect', '部品交換':'type-consumable', 'アラーム対応':'type-trouble', '業者対応':'type-repair' };
+
+  // フィルター適用
+  const filtered = allHistoryData.filter(r => {
+    const isInsp = String(r.type || '').includes('点検');
+    if (allHistoryTypeFilter === 'insp'   && !isInsp) return false;
+    if (allHistoryTypeFilter === 'repair' &&  isInsp) return false;
+    if (allHistoryMachineFilter !== 'all' && r.deviceId !== allHistoryMachineFilter) return false;
+    return true;
+  });
 
   function historyItemHtml(r, showDevice) {
     const deviceLabel = (r.machineNo !== undefined && r.machineNo !== null && r.machineNo !== '-')
@@ -921,24 +976,24 @@ function renderAllHistory() {
     `;
   }
 
-  if (allHistoryData.length === 0) {
-    container.innerHTML = '<div class="empty-state">記録がありません</div>';
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="empty-state">該当する記録がありません</div>';
     return;
   }
 
   if (allHistorySort === 'timeline') {
-    const sorted = [...allHistoryData].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const sorted = [...filtered].sort((a, b) => new Date(b.date) - new Date(a.date));
     container.innerHTML = sorted.map(r => historyItemHtml(r, true)).join('');
   } else {
     // 機器別グループ
     const groups = {};
-    allHistoryData.forEach(r => {
+    filtered.forEach(r => {
       if (!groups[r.deviceId]) groups[r.deviceId] = { deviceId: r.deviceId, machineNo: r.machineNo, records: [] };
       groups[r.deviceId].records.push(r);
     });
     const sortedGroups = Object.values(groups).sort((a, b) => {
-      const an = (a.machineNo === '-' || a.machineNo === undefined) ? 9999 : Number(a.machineNo);
-      const bn = (b.machineNo === '-' || b.machineNo === undefined) ? 9999 : Number(b.machineNo);
+      const an = isNaN(Number(a.machineNo)) ? 9999 : Number(a.machineNo);
+      const bn = isNaN(Number(b.machineNo)) ? 9999 : Number(b.machineNo);
       return an - bn;
     });
     sortedGroups.forEach(g => g.records.sort((a, b) => new Date(b.date) - new Date(a.date)));
