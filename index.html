@@ -196,6 +196,16 @@ body { font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif; background: var
 .history-group-label { font-size: 17px; font-weight: 800; color: var(--blue); padding: 6px 0; border-bottom: 1px solid var(--border); margin-bottom: 8px; cursor: pointer; }
 .hist-filter-bar { padding: 8px 16px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--border); background: var(--surface); }
 .hist-machine-select { background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 20px; padding: 5px 12px; font-size: 12px; font-family: inherit; cursor: pointer; max-width: 160px; }
+.nav-site { background: none; border: 1px solid var(--border); color: var(--text2); padding: 5px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: inherit; white-space: nowrap; display: none; }
+.nav-site:hover { color: var(--text); }
+.home-wrap { padding: 48px 20px 24px; display: flex; flex-direction: column; align-items: center; }
+.home-title { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
+.home-subtitle { font-size: 13px; color: var(--text2); margin-bottom: 32px; }
+.home-sites { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 16px; }
+.site-card { background: var(--surface); border: 2px solid var(--border); border-radius: 14px; padding: 24px 20px; cursor: pointer; transition: all 0.15s; }
+.site-card:hover { border-color: var(--blue); background: rgba(47,129,247,0.06); }
+.site-name { font-size: 22px; font-weight: 800; margin-bottom: 12px; }
+.site-stat-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .history-group-label:hover { color: var(--text); }
 .history-group { margin-bottom: 20px; }
 
@@ -277,18 +287,37 @@ const DEMO_ALL_HISTORY = [
 
 <!-- Nav -->
 <div class="nav">
-  <div class="nav-brand" onclick="showScreen('screen-list')">
+  <div class="nav-brand" onclick="goHome()">
     <div class="logo">🔧</div>
     コンソール管理
   </div>
   <div class="nav-links" id="nav-links">
     <button class="nav-link" onclick="showScreen('screen-all-history')">履歴一覧</button>
   </div>
+  <button class="nav-site" id="nav-site" onclick="goHome()">← 拠点変更</button>
   <button class="nav-back" id="nav-back" onclick="showScreen('screen-list')">← 一覧へ</button>
 </div>
 
+<!-- ═══ 拠点選択画面 ═══ -->
+<div class="screen active" id="screen-home">
+  <div class="home-wrap">
+    <div class="home-title">透析コンソール管理</div>
+    <div class="home-subtitle">拠点を選択してください</div>
+    <div class="home-sites">
+      <div class="site-card" onclick="selectSite('川奈')">
+        <div class="site-name">川奈透析室</div>
+        <div class="site-stat-row" id="home-stats-kawana"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+      <div class="site-card" onclick="selectSite('伊豆高原')">
+        <div class="site-name">伊豆高原透析室</div>
+        <div class="site-stat-row" id="home-stats-izu"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ 一覧画面 ═══ -->
-<div class="screen active" id="screen-list">
+<div class="screen" id="screen-list">
   <div class="config-bar" style="display:none">
     <div class="config-bar-title">🔗 GAS接続設定</div>
     <div class="config-row">
@@ -319,7 +348,7 @@ const DEMO_ALL_HISTORY = [
   </div>
 
   <div class="list-header">
-    <div class="list-title">コンソール一覧</div>
+    <div class="list-title" id="list-title">コンソール一覧</div>
     <div class="list-stats" id="list-stats"></div>
   </div>
 
@@ -328,8 +357,6 @@ const DEMO_ALL_HISTORY = [
     <button class="filter-btn" onclick="filterConsoles(this,'ok')">✅ 正常</button>
     <button class="filter-btn" onclick="filterConsoles(this,'warn')">⚠️ 要注意</button>
     <button class="filter-btn" onclick="filterConsoles(this,'alert')">🚨 要対応</button>
-    <button class="filter-btn" onclick="filterConsoles(this,'川奈')">川奈</button>
-    <button class="filter-btn" onclick="filterConsoles(this,'伊豆高原')">伊豆高原</button>
   </div>
 
   <div id="console-grid" class="console-grid">
@@ -459,6 +486,7 @@ const DEMO_ALL_HISTORY = [
 <script>
 // ── 状態管理 ──
 let allDevices = [];
+let currentSite = null;
 let currentFilter = 'all';
 let currentDevice = null;
 let gasUrl = GAS_URL;
@@ -482,8 +510,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (input) input.value = gasUrl || '';
 
   updateConfigStatus();
-  await loadDeviceList();   // 機器一覧を先に完了させてからスケジュール取得
-  loadSchedule();
+  await loadDeviceList();
+  updateHomeStats();
 
   const today = new Date().toISOString().split('T')[0];
   ['i-date','r-date'].forEach(id => {
@@ -497,15 +525,48 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 
+  const isHome   = id === 'screen-home';
   const isDetail = id === 'screen-detail';
-  document.getElementById('nav-back').style.display  = isDetail ? 'block' : 'none';
-  document.getElementById('nav-links').style.display = isDetail ? 'none'  : 'flex';
+  document.getElementById('nav-back').style.display = isDetail ? 'block' : 'none';
+  document.getElementById('nav-site').style.display = (!isHome && !isDetail) ? 'block' : 'none';
+  document.getElementById('nav-links').style.display = isDetail ? 'none' : (isHome ? 'none' : 'flex');
 
   window.scrollTo(0, 0);
 
-  if (id === 'screen-list')          renderList(currentFilter);
+  if (id === 'screen-list')         { renderList(currentFilter); loadSchedule(); }
   if (id === 'screen-all-history')  loadAllHistory();
   if (id === 'screen-replace-years') loadReplaceYears();
+}
+
+function goHome() {
+  currentSite = null;
+  allHistoryLoaded = false;
+  showScreen('screen-home');
+}
+
+function selectSite(site) {
+  currentSite = site;
+  currentFilter = 'all';
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  const firstBtn = document.querySelector('#screen-list .filter-btn');
+  if (firstBtn) firstBtn.classList.add('active');
+  showScreen('screen-list');
+}
+
+function updateHomeStats() {
+  const sites = { '川奈': 'kawana', '伊豆高原': 'izu' };
+  const statusLabel = { ok:'✅ 正常', warn:'⚠️ 要注意', alert:'🚨 要対応' };
+  for (const [site, key] of Object.entries(sites)) {
+    const el = document.getElementById('home-stats-' + key);
+    if (!el) continue;
+    const devs = allDevices.filter(d => d.site === site);
+    if (devs.length === 0) { el.innerHTML = '<span style="color:var(--text2);font-size:12px">データなし</span>'; continue; }
+    const counts = { ok:0, warn:0, alert:0 };
+    devs.forEach(d => { if (counts[d.status] !== undefined) counts[d.status]++; });
+    el.innerHTML = Object.entries(counts).map(([s, n]) =>
+      `<span class="stat-chip ${s}" style="font-size:11px">${statusLabel[s]} ${n}</span>`
+    ).join('');
+  }
 }
 
 // ── GAS URL設定 ──
@@ -592,16 +653,20 @@ async function loadDeviceList() {
 
 function renderList(filter) {
   currentFilter = filter;
+  const titleEl = document.getElementById('list-title');
+  if (titleEl) titleEl.textContent = (currentSite || 'コンソール') + '一覧';
   const grid = document.getElementById('console-grid');
   const filtered = allDevices.filter(d => {
+    if (currentSite && d.site !== currentSite) return false;
     if (filter === 'all') return true;
     if (['ok','warn','alert'].includes(filter)) return d.status === filter;
-    return d.site === filter;
+    return true;
   });
 
-  const okCount    = allDevices.filter(d => d.status === 'ok').length;
-  const warnCount  = allDevices.filter(d => d.status === 'warn').length;
-  const alertCount = allDevices.filter(d => d.status === 'alert').length;
+  const siteDevices = currentSite ? allDevices.filter(d => d.site === currentSite) : allDevices;
+  const okCount    = siteDevices.filter(d => d.status === 'ok').length;
+  const warnCount  = siteDevices.filter(d => d.status === 'warn').length;
+  const alertCount = siteDevices.filter(d => d.status === 'alert').length;
   document.getElementById('list-stats').innerHTML = `
     <div class="stat-chip ok">正常 ${okCount}</div>
     <div class="stat-chip warn">要注意 ${warnCount}</div>
@@ -650,6 +715,7 @@ async function loadSchedule() {
       // GASが getSchedule に対応していればそのデータを使用
       // 対応していない場合（error返却 or 未定義）はデモデータを継続使用
       if (data && Array.isArray(data.schedules)) schedules = data.schedules;
+      if (currentSite) schedules = schedules.filter(s => s.site === currentSite);
     } catch(e) {
       schedules = DEMO_SCHEDULE;
     }
@@ -976,6 +1042,10 @@ function renderAllHistory() {
     if (allHistoryTypeFilter === 'insp'   && !isInsp) return false;
     if (allHistoryTypeFilter === 'repair' &&  isInsp) return false;
     if (allHistoryMachineFilter !== 'all' && r.deviceId !== allHistoryMachineFilter) return false;
+    if (currentSite) {
+      const dev = allDevices.find(d => d.id === r.deviceId);
+      if (dev && dev.site !== currentSite) return false;
+    }
     return true;
   });
 
