@@ -327,18 +327,6 @@ const DEMO_ALL_HISTORY = [
     <div class="config-status" id="config-status"></div>
   </div>
 
-  <div class="qr-demo-bar">
-    <span class="qr-demo-label">🎮 デモ：QRスキャン → 機器選択</span>
-    <select class="qr-demo-select" id="qr-select">
-      <option value="KW-C-001">KW-C-001</option>
-      <option value="KW-C-012">KW-C-012</option>
-      <option value="KW-C-014">KW-C-014</option>
-      <option value="KW-C-019">KW-C-019</option>
-      <option value="KW-M-RO-01">KW-M-RO-01</option>
-    </select>
-    <button class="btn-scan" onclick="scanQR()">📷 スキャン</button>
-  </div>
-
   <!-- 今月の予定 -->
   <div class="schedule-section">
     <div class="schedule-header">
@@ -512,6 +500,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   updateConfigStatus();
   await loadDeviceList();
   updateHomeStats();
+  handleUrlParams();
 
   const today = new Date().toISOString().split('T')[0];
   ['i-date','r-date'].forEach(id => {
@@ -1159,9 +1148,18 @@ function switchTab(btn, tabId) {
   document.getElementById(tabId).classList.add('active');
 }
 
-function scanQR() {
-  const id = document.getElementById('qr-select').value;
-  showDetail(id);
+// ── URLパラメータ対応（QRコードから直接機器詳細を開く）──
+// 例: https://.../?device=KW-C-001
+function handleUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  const deviceId = params.get('device');
+  if (!deviceId) return;
+  // 該当機器の拠点を特定して自動選択
+  const dev = allDevices.find(d => d.id === deviceId);
+  if (dev) {
+    currentSite = dev.site;
+  }
+  showDetail(deviceId);
 }
 
 function closeModal() { document.getElementById('modal').classList.remove('open'); }
