@@ -486,6 +486,7 @@ function showScreen(id) {
 
   window.scrollTo(0, 0);
 
+  if (id === 'screen-list')          renderList(currentFilter);
   if (id === 'screen-all-history')  loadAllHistory();
   if (id === 'screen-replace-years') loadReplaceYears();
 }
