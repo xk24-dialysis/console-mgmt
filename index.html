@@ -141,17 +141,20 @@ body { font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif; background: var
 .btn-add:hover { opacity: 0.85; }
 
 .history-list { display: flex; flex-direction: column; gap: 8px; }
-.history-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
-.history-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
-.history-type { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+.history-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.history-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.history-date-left { font-size: 12px; font-weight: 600; color: var(--text2); white-space: nowrap; min-width: 76px; }
+.history-machine { font-size: 16px; font-weight: 800; color: var(--text); flex: 1; }
+.history-type { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
 .type-inspect    { background: rgba(47,129,247,0.15); color: var(--blue); }
 .type-trouble    { background: rgba(248,81,73,0.15);  color: var(--red); }
 .type-consumable { background: rgba(240,136,62,0.15); color: var(--orange); }
 .type-repair     { background: rgba(163,113,247,0.15);color: var(--purple); }
-.history-date    { font-size: 11px; color: var(--text2); }
-.history-content { font-size: 13px; line-height: 1.5; }
-.history-staff   { font-size: 11px; color: var(--text2); margin-top: 4px; }
-.history-next    { font-size: 11px; color: var(--blue); margin-top: 4px; }
+.history-fields { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+.history-field { font-size: 12px; line-height: 1.5; display: flex; gap: 6px; align-items: flex-start; }
+.history-field-label { font-size: 10px; font-weight: 700; color: var(--text2); background: var(--surface); border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px; white-space: nowrap; margin-top: 2px; flex-shrink: 0; }
+.history-staff { font-size: 11px; color: var(--text2); }
+.history-next  { font-size: 11px; color: var(--blue); margin-top: 4px; }
 
 .empty-state { text-align: center; padding: 32px 16px; color: var(--text2); font-size: 13px; }
 
@@ -190,8 +193,7 @@ body { font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif; background: var
 
 /* 全履歴 */
 .all-history-list { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
-.history-item-device { font-size: 11px; font-weight: 700; color: var(--blue); margin-bottom: 4px; }
-.history-group-label { font-size: 13px; font-weight: 700; color: var(--blue); padding: 6px 0; border-bottom: 1px solid var(--border); margin-bottom: 8px; cursor: pointer; }
+.history-group-label { font-size: 17px; font-weight: 800; color: var(--blue); padding: 6px 0; border-bottom: 1px solid var(--border); margin-bottom: 8px; cursor: pointer; }
 .hist-filter-bar { padding: 8px 16px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--border); background: var(--surface); }
 .hist-machine-select { background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 20px; padding: 5px 12px; font-size: 12px; font-family: inherit; cursor: pointer; max-width: 160px; }
 .history-group-label:hover { color: var(--text); }
@@ -969,18 +971,21 @@ function renderAllHistory() {
   });
 
   function historyItemHtml(r, showDevice) {
-    const deviceLabel = (r.machineNo !== undefined && r.machineNo !== null && r.machineNo !== '-')
-      ? `${r.machineNo}　${r.deviceId}`
-      : r.deviceId;
+    const machineLabel = (r.machineNo && r.machineNo !== '-') ? String(r.machineNo) : r.deviceId;
+    const isInsp = String(r.type || '').includes('点検');
+    const staffLine = [r.vendor ? '業者: ' + r.vendor : '', r.staff ? '担当: ' + r.staff : ''].filter(Boolean).join('　');
     return `
       <div class="history-item" onclick="showDetail('${r.deviceId}')" style="cursor:pointer">
-        ${showDevice ? `<div class="history-item-device">${deviceLabel}</div>` : ''}
-        <div class="history-top">
+        <div class="history-head">
+          <span class="history-date-left">${r.date || ''}</span>
+          ${showDevice ? `<span class="history-machine">${machineLabel}</span>` : ''}
           <span class="history-type ${typeClass[r.type] || 'type-consumable'}">${r.type || ''}</span>
-          <span class="history-date">${r.date || ''}</span>
         </div>
-        <div class="history-content">${r.parts ? r.parts + '　' : ''}${r.content || ''}</div>
-        <div class="history-staff">${r.vendor ? '業者: ' + r.vendor + '　' : ''}${r.staff ? '担当: ' + r.staff : ''}</div>
+        <div class="history-fields">
+          ${r.parts   ? `<div class="history-field"><span class="history-field-label">交換部品</span><span>${r.parts}</span></div>` : ''}
+          ${r.content ? `<div class="history-field"><span class="history-field-label">${isInsp ? '点検内容' : '実施内容'}</span><span>${r.content}</span></div>` : ''}
+        </div>
+        ${staffLine ? `<div class="history-staff">${staffLine}</div>` : ''}
         ${r.nextDate ? `<div class="history-next">📅 次回予定: ${r.nextDate}</div>` : ''}
       </div>
     `;
@@ -1013,8 +1018,7 @@ function renderAllHistory() {
     sortedGroups.forEach(g => g.records.sort(dateCmp));
 
     container.innerHTML = sortedGroups.map(g => {
-      const hasMachineNo = g.machineNo !== undefined && g.machineNo !== null && g.machineNo !== '-';
-      const label = hasMachineNo ? `${g.machineNo}　${g.deviceId}` : g.deviceId;
+      const label = (g.machineNo && g.machineNo !== '-') ? String(g.machineNo) : g.deviceId;
       return `
         <div class="history-group">
           <div class="history-group-label" onclick="showDetail('${g.deviceId}')">🔧 ${label}</div>
