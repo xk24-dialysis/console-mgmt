@@ -1011,9 +1011,7 @@ function renderAllHistory() {
       groups[r.deviceId].records.push(r);
     });
     const sortedGroups = Object.values(groups).sort((a, b) => {
-      const an = isNaN(Number(a.machineNo)) ? 9999 : Number(a.machineNo);
-      const bn = isNaN(Number(b.machineNo)) ? 9999 : Number(b.machineNo);
-      return an - bn;
+      return String(a.machineNo || '').localeCompare(String(b.machineNo || ''), 'ja', { numeric: true });
     });
     sortedGroups.forEach(g => g.records.sort(dateCmp));
 
