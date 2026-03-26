@@ -206,6 +206,15 @@ body { font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif; background: var
 .site-card:hover { border-color: var(--blue); background: rgba(47,129,247,0.06); }
 .site-name { font-size: 22px; font-weight: 800; margin-bottom: 12px; }
 .site-stat-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.home-qr-btn { margin-top: 20px; background: none; border: 1px solid var(--border); color: var(--text2); padding: 8px 18px; border-radius: 8px; font-size: 12px; cursor: pointer; font-family: inherit; }
+.home-qr-btn:hover { color: var(--text); border-color: var(--text2); }
+.qr-list { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.qr-item { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; gap: 10px; }
+.qr-item-info { flex: 1; min-width: 0; }
+.qr-item-machine { font-size: 15px; font-weight: 700; }
+.qr-item-id { font-size: 11px; color: var(--text2); }
+.qr-item-url { font-size: 10px; color: var(--text2); word-break: break-all; margin-top: 2px; }
+.qr-copy-btn { background: var(--blue-dim); border: 1px solid var(--blue); color: var(--blue); padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: inherit; white-space: nowrap; flex-shrink: 0; }
 .history-group-label:hover { color: var(--text); }
 .history-group { margin-bottom: 20px; }
 
@@ -313,6 +322,18 @@ const DEMO_ALL_HISTORY = [
         <div class="site-stat-row" id="home-stats-izu"><div class="loading"><div class="spinner"></div></div></div>
       </div>
     </div>
+    <button class="home-qr-btn" onclick="showScreen('screen-qr-urls')">📋 QRコード用URL一覧</button>
+  </div>
+</div>
+
+<!-- ═══ QR URL一覧画面 ═══ -->
+<div class="screen" id="screen-qr-urls">
+  <div class="page-header">
+    <div class="page-title">QRコード用URL一覧</div>
+    <div class="page-subtitle">各URLをQRコード生成サービスに貼り付けてください</div>
+  </div>
+  <div id="qr-urls-list" class="qr-list">
+    <div class="loading"><div class="spinner"></div>読み込み中...</div>
   </div>
 </div>
 
@@ -517,14 +538,16 @@ function showScreen(id) {
   const isHome   = id === 'screen-home';
   const isDetail = id === 'screen-detail';
   document.getElementById('nav-back').style.display = isDetail ? 'block' : 'none';
+  const isQr = id === 'screen-qr-urls';
   document.getElementById('nav-site').style.display = (!isHome && !isDetail) ? 'block' : 'none';
-  document.getElementById('nav-links').style.display = isDetail ? 'none' : (isHome ? 'none' : 'flex');
+  document.getElementById('nav-links').style.display = (isDetail || isHome || isQr) ? 'none' : 'flex';
 
   window.scrollTo(0, 0);
 
-  if (id === 'screen-list')         { renderList(currentFilter); loadSchedule(); }
+  if (id === 'screen-list')          { renderList(currentFilter); loadSchedule(); }
   if (id === 'screen-all-history')  loadAllHistory();
   if (id === 'screen-replace-years') loadReplaceYears();
+  if (id === 'screen-qr-urls')      renderQrUrls();
 }
 
 function goHome() {
@@ -1146,6 +1169,46 @@ function switchTab(btn, tabId) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById(tabId).classList.add('active');
+}
+
+// ── QR URL一覧 ──
+function renderQrUrls() {
+  const container = document.getElementById('qr-urls-list');
+  const base = location.origin + location.pathname;
+  const sorted = [...allDevices].sort((a, b) =>
+    String(a.machineNo || '').localeCompare(String(b.machineNo || ''), 'ja', { numeric: true })
+  );
+  if (sorted.length === 0) {
+    container.innerHTML = '<div class="empty-state">機器データがありません</div>';
+    return;
+  }
+  // 拠点ごとにグループ表示
+  const sites = [...new Set(sorted.map(d => d.site))];
+  container.innerHTML = sites.map(site => {
+    const devs = sorted.filter(d => d.site === site);
+    return `
+      <div style="margin-bottom:8px;font-size:13px;font-weight:700;color:var(--text2);padding:4px 0">${site}</div>
+      ${devs.map(d => {
+        const url = `${base}?device=${encodeURIComponent(d.id)}`;
+        return `
+          <div class="qr-item">
+            <div class="qr-item-info">
+              <div class="qr-item-machine">${d.machineNo !== '-' ? d.machineNo : d.id}</div>
+              <div class="qr-item-id">${d.id}　${d.model || ''}</div>
+              <div class="qr-item-url">${url}</div>
+            </div>
+            <button class="qr-copy-btn" onclick="copyUrl('${url}', this)">コピー</button>
+          </div>`;
+      }).join('')}
+    `;
+  }).join('');
+}
+
+function copyUrl(url, btn) {
+  navigator.clipboard.writeText(url).then(() => {
+    btn.textContent = '✅ コピー済';
+    setTimeout(() => { btn.textContent = 'コピー'; }, 2000);
+  });
 }
 
 // ── URLパラメータ対応（QRコードから直接機器詳細を開く）──
